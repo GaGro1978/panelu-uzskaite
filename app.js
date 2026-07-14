@@ -1,11 +1,8 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-app.js";
 import {
-  getFirestore, collection, addDoc, doc, updateDoc, onSnapshot,
-  serverTimestamp, runTransaction
+  getFirestore, collection, addDoc, getDocs, onSnapshot,
+  serverTimestamp, writeBatch, doc, query, where
 } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
-import {
-  getStorage, ref, uploadBytes, getDownloadURL
-} from "https://www.gstatic.com/firebasejs/12.0.0/firebase-storage.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyCl6Bwf2oIMnDWKY-cZZUOJtWsJNcWr1nk",
@@ -18,378 +15,306 @@ const firebaseConfig = {
 
 const firebaseApp = initializeApp(firebaseConfig);
 const db = getFirestore(firebaseApp);
-const storage = getStorage(firebaseApp);
-
 const $ = id => document.getElementById(id);
+
 const state = {
-  factories: [], workers: [], objects: [], panels: [], jobs: [],
-  activeJobId: localStorage.getItem("pps_active_job") || null
+  objects: [],
+  panels: [],
+  previewRows: []
 };
 
-function toDate(value){
-  if(!value) return null;
-  if(typeof value.toDate === "function") return value.toDate();
-  return new Date(value);
+function normalizeHeader(value){
+  return String(value ?? "")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g," ")
+    .replace(/[.]/g,"")
+    .replace(/[ā]/g,"a")
+    .replace(/[ē]/g,"e")
+    .replace(/[ī]/g,"i")
+    .replace(/[ū]/g,"u")
+    .replace(/[ģ]/g,"g")
+    .replace(/[ķ]/g,"k")
+    .replace(/[ļ]/g,"l")
+    .replace(/[ņ]/g,"n")
+    .replace(/[š]/g,"s")
+    .replace(/[ž]/g,"z")
+    .replace(/[č]/g,"c");
 }
-function hms(seconds){
-  seconds = Math.max(0, Math.floor(seconds || 0));
-  return [Math.floor(seconds/3600), Math.floor((seconds%3600)/60), seconds%60]
-    .map(v => String(v).padStart(2,"0")).join(":");
-}
-function elapsed(job){
-  let total = job.accumulatedSeconds || 0;
-  if(job.status === "Procesā" && job.lastResumeAt){
-    const d = toDate(job.lastResumeAt);
-    if(d) total += (Date.now() - d.getTime()) / 1000;
-  }
-  return total;
-}
-function byId(list,id){ return list.find(x => x.id === id); }
-function activeJob(){ return state.jobs.find(j => j.id === state.activeJobId); }
 
-function fillSelect(select, items, allLabel=null){
-  const previous = select.value;
-  select.innerHTML = "";
-  if(allLabel){
-    const option = document.createElement("option");
-    option.value = "";
-    option.textContent = allLabel;
-    select.appendChild(option);
+function parseNumber(value){
+  if(value === null || value === undefined || value === "") return null;
+  if(typeof value === "number") return value;
+  const cleaned = String(value)
+    .replace(/\s/g,"")
+    .replace(",",".")
+    .replace(/[^\d.-]/g,"");
+  const number = Number(cleaned);
+  return Number.isFinite(number) ? number : null;
+}
+
+function factoryName(value, fallback){
+  const raw = String(value ?? "").trim();
+  if(raw) return raw;
+  return fallback || "";
+}
+
+function findField(row, aliases){
+  const keys = Object.keys(row);
+  for(const alias of aliases){
+    const match = keys.find(k => normalizeHeader(k) === normalizeHeader(alias));
+    if(match !== undefined) return row[match];
   }
-  items.forEach(item => {
-    const option = document.createElement("option");
-    option.value = item.id;
-    option.textContent = item.name;
-    select.appendChild(option);
+  return null;
+}
+
+function mapRow(row, defaultFactory){
+  const panelName = String(findField(row, ["Pan. Nr","Pan Nr","Panelis","Panel Nr"]) ?? "").trim();
+  const pcs = parseNumber(findField(row, ["PCS","Skaits"])) ?? 1;
+  const length = parseNumber(findField(row, ["Pan. Lenght","Pan. Length","Garums"]));
+  const width = parseNumber(findField(row, ["Pan. Width","Platums","Biezums"]));
+  const height = parseNumber(findField(row, ["Pan. Height","Augstums"]));
+  const weightRaw = parseNumber(findField(row, ["Weight","Svars"]));
+  const grossArea = parseNumber(findField(row, ["GrossA","Gross A","Platiba","Platība"]));
+  const designation = String(findField(row, ["Designation","Tips","Apzimejums","Apzīmējums"]) ?? "").trim();
+  const factory = factoryName(findField(row, ["Rūpnīca","Rupnica","Factory"]), defaultFactory);
+
+  const errors = [];
+  if(!panelName) errors.push("Nav paneļa numura");
+  if(pcs <= 0) errors.push("Nederīgs skaits");
+
+  return {
+    panelName,
+    pcs,
+    length,
+    width,
+    height,
+    weight: weightRaw,
+    grossArea,
+    designation,
+    factory,
+    status:"Nav sākts",
+    errors,
+    valid: errors.length === 0
+  };
+}
+
+function fillObjectSelects(){
+  const selects = [$("objectSelect"), $("panelObjectFilter")];
+  selects.forEach((select,index)=>{
+    const old = select.value;
+    select.innerHTML = "";
+    if(index === 1){
+      const all = document.createElement("option");
+      all.value = "";
+      all.textContent = "Visi objekti";
+      select.appendChild(all);
+    }
+    state.objects.forEach(object=>{
+      const option = document.createElement("option");
+      option.value = object.id;
+      option.textContent = object.name;
+      select.appendChild(option);
+    });
+    if([...select.options].some(o=>o.value===old)) select.value=old;
   });
-  if([...select.options].some(o => o.value === previous)) select.value = previous;
 }
 
-function renderSelectors(){
-  fillSelect($("factorySelect"), state.factories);
-  const factoryId = $("factorySelect").value;
-
-  fillSelect($("workerSelect"), state.workers.filter(w => w.factoryId === factoryId));
-  fillSelect($("objectSelect"), state.objects);
-
-  const objectId = $("objectSelect").value;
-  fillSelect(
-    $("panelSelect"),
-    state.panels.filter(p =>
-      p.factoryId === factoryId &&
-      p.objectId === objectId &&
-      p.status !== "Pabeigts"
-    )
-  );
-
-  fillSelect($("filterFactory"), state.factories, "Visas rūpnīcas");
-  fillSelect($("filterObject"), state.objects, "Visi objekti");
-
-  fillSelect($("newWorkerFactory"), state.factories);
-  fillSelect($("newPanelFactory"), state.factories);
-  fillSelect($("newPanelObject"), state.objects);
-
-  $("startBtn").disabled =
-    !factoryId ||
-    !$("workerSelect").value ||
-    !objectId ||
-    !$("panelSelect").value ||
-    !!state.activeJobId;
-}
-
-function renderActive(){
-  const job = activeJob();
-  $("noActive").classList.toggle("hidden", !!job);
-  $("activePanelBlock").classList.toggle("hidden", !job);
-
-  if(!job){
-    $("activeBadge").textContent = "Nav aktīvs";
-    $("activeBadge").className = "badge muted";
-    return;
-  }
-
-  $("activeFactory").textContent = byId(state.factories, job.factoryId)?.name || "—";
-  $("activeObject").textContent = byId(state.objects, job.objectId)?.name || "—";
-  $("activePanel").textContent = job.panelName || "—";
-  $("activeWorker").textContent = job.workerName || "—";
-  $("activeBadge").textContent = job.status;
-  $("activeBadge").className = "badge " + (job.status === "Pauzē" ? "paused" : "running");
-  $("pauseBtn").textContent = job.status === "Pauzē" ? "TURPINĀT" : "PAUZE";
-  $("timer").textContent = hms(elapsed(job));
-}
-
-function renderOverview(){
-  const factoryFilter = $("filterFactory").value;
-  const objectFilter = $("filterObject").value;
-
-  const panels = state.panels.filter(p =>
-    (!factoryFilter || p.factoryId === factoryFilter) &&
-    (!objectFilter || p.objectId === objectFilter)
-  );
-
-  const count = {notStarted:0,running:0,paused:0,done:0};
-  panels.forEach(p => {
-    if(p.status === "Procesā") count.running++;
-    else if(p.status === "Pauzē") count.paused++;
-    else if(p.status === "Pabeigts") count.done++;
-    else count.notStarted++;
-  });
-
-  $("countNotStarted").textContent = count.notStarted;
-  $("countRunning").textContent = count.running;
-  $("countPaused").textContent = count.paused;
-  $("countDone").textContent = count.done;
-
-  const body = $("overviewBody");
+function renderPreview(){
+  const body = $("previewBody");
   body.innerHTML = "";
+  let valid = 0;
+  let invalid = 0;
 
-  panels.forEach(panel => {
-    const job =
-      state.jobs.find(j => j.panelId === panel.id && j.status !== "Pabeigts") ||
-      [...state.jobs].reverse().find(j => j.panelId === panel.id);
-
+  state.previewRows.forEach(row=>{
+    row.valid ? valid++ : invalid++;
     const tr = document.createElement("tr");
     tr.innerHTML = `
-      <td>${byId(state.factories,panel.factoryId)?.name || "—"}</td>
-      <td>${byId(state.objects,panel.objectId)?.name || "—"}</td>
-      <td><strong>${panel.name}</strong></td>
-      <td>${job?.workerName || "—"}</td>
-      <td>${panel.status || "Nav sākts"}</td>
-      <td>${job ? hms(elapsed(job)) : "—"}</td>
-      <td>${panel.photoCount || 0}</td>`;
+      <td class="${row.valid?"status-ok":"status-error"}">${row.valid?"Derīgs":row.errors.join(", ")}</td>
+      <td><strong>${row.panelName || "—"}</strong></td>
+      <td>${row.pcs ?? "—"}</td>
+      <td>${row.length ?? "—"}</td>
+      <td>${row.width ?? "—"}</td>
+      <td>${row.height ?? "—"}</td>
+      <td>${row.weight ?? "—"}</td>
+      <td>${row.grossArea ?? "—"}</td>
+      <td>${row.designation || "—"}</td>
+      <td>${row.factory || "—"}</td>`;
+    body.appendChild(tr);
+  });
+
+  $("previewCount").textContent = `${state.previewRows.length} rindas`;
+  $("validationSummary").innerHTML =
+    `<strong>Derīgas:</strong> ${valid} &nbsp; | &nbsp; <strong>Kļūdainas:</strong> ${invalid}`;
+  $("previewCard").classList.remove("hidden");
+  $("importBtn").disabled = valid === 0 || !$("objectSelect").value;
+}
+
+function renderPanels(){
+  const objectFilter = $("panelObjectFilter").value;
+  const search = $("panelSearch").value.trim().toLowerCase();
+
+  const filtered = state.panels.filter(panel =>
+    (!objectFilter || panel.objectId === objectFilter) &&
+    (!search || String(panel.panelName || "").toLowerCase().includes(search))
+  );
+
+  $("totalPanels").textContent = filtered.length;
+  $("ventsCount").textContent = filtered.filter(p=>p.factory==="Ventspils").length;
+  $("jekCount").textContent = filtered.filter(p=>p.factory==="Jēkabpils").length;
+  $("balviCount").textContent = filtered.filter(p=>p.factory==="Balvi").length;
+
+  const body = $("panelsBody");
+  body.innerHTML = "";
+  filtered.forEach(panel=>{
+    const object = state.objects.find(o=>o.id===panel.objectId);
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${object?.name || "—"}</td>
+      <td><strong>${panel.panelName || "—"}</strong></td>
+      <td>${panel.pcs ?? "—"}</td>
+      <td>${panel.length ?? "—"}</td>
+      <td>${panel.width ?? "—"}</td>
+      <td>${panel.height ?? "—"}</td>
+      <td>${panel.weight ?? "—"}</td>
+      <td>${panel.grossArea ?? "—"}</td>
+      <td>${panel.designation || "—"}</td>
+      <td>${panel.factory || "—"}</td>
+      <td>${panel.status || "Nav sākts"}</td>`;
     body.appendChild(tr);
   });
 }
 
-function renderAll(){
-  renderSelectors();
-  renderActive();
-  renderOverview();
-}
-
-function subscribeCollection(collectionName, stateKey){
-  onSnapshot(
-    collection(db, collectionName),
-    snapshot => {
-      state[stateKey] = snapshot.docs
-        .map(d => ({id:d.id, ...d.data()}))
-        .sort((a,b) => (a.name || "").localeCompare(b.name || "", "lv"));
-
-      $("connectionBadge").textContent = "Tiešsaistē";
-      $("connectionBadge").className = "badge online";
-      $("systemStatus").textContent =
-        "Firebase savienojums darbojas.\nDati sinhronizējas reāllaikā.";
-      renderAll();
-    },
-    error => {
-      $("connectionBadge").textContent = "Nav savienojuma";
-      $("connectionBadge").className = "badge offline";
-      $("systemStatus").textContent =
-        "Firebase kļūda:\n" + error.message +
-        "\n\nPārbaudi Firestore Rules un GitHub failu versiju.";
-    }
-  );
-}
-
-subscribeCollection("factories","factories");
-subscribeCollection("workers","workers");
-subscribeCollection("objects","objects");
-subscribeCollection("panels","panels");
-subscribeCollection("jobs","jobs");
-
-$("factorySelect").addEventListener("change", renderSelectors);
-$("objectSelect").addEventListener("change", renderSelectors);
-$("filterFactory").addEventListener("change", renderOverview);
-$("filterObject").addEventListener("change", renderOverview);
-
-document.querySelectorAll(".tab").forEach(button => {
-  button.addEventListener("click", () => {
-    document.querySelectorAll(".tab").forEach(b => b.classList.remove("active"));
-    button.classList.add("active");
-    document.querySelectorAll(".view").forEach(v => v.classList.add("hidden"));
-    $(button.dataset.view + "View").classList.remove("hidden");
-  });
+onSnapshot(collection(db,"objects"), snapshot=>{
+  state.objects = snapshot.docs.map(d=>({id:d.id,...d.data()}))
+    .sort((a,b)=>(a.name||"").localeCompare(b.name||"","lv"));
+  fillObjectSelects();
+  $("connectionBadge").textContent = "Tiešsaistē";
+  $("connectionBadge").className = "badge online";
+}, error=>{
+  $("connectionBadge").textContent = "Nav savienojuma";
+  $("connectionBadge").className = "badge offline";
+  $("objectMessage").textContent = error.message;
+  $("objectMessage").className = "message error";
 });
 
-$("addFactoryBtn").addEventListener("click", async () => {
-  const name = $("newFactoryName").value.trim();
+onSnapshot(collection(db,"panels"), snapshot=>{
+  state.panels = snapshot.docs.map(d=>({id:d.id,...d.data()}));
+  renderPanels();
+});
+
+$("createObjectBtn").addEventListener("click", async ()=>{
+  const name = $("objectName").value.trim();
   if(!name) return;
-  await addDoc(collection(db,"factories"), {name, createdAt:serverTimestamp()});
-  $("newFactoryName").value = "";
-});
 
-$("addWorkerBtn").addEventListener("click", async () => {
-  const name = $("newWorkerName").value.trim();
-  const factoryId = $("newWorkerFactory").value;
-  if(!name || !factoryId) return;
-  await addDoc(collection(db,"workers"), {
-    name, factoryId, active:true, createdAt:serverTimestamp()
-  });
-  $("newWorkerName").value = "";
-});
+  const duplicate = state.objects.some(o=>String(o.name).toLowerCase()===name.toLowerCase());
+  if(duplicate){
+    $("objectMessage").textContent = "Objekts ar šādu nosaukumu jau eksistē.";
+    $("objectMessage").className = "message error";
+    return;
+  }
 
-$("addObjectBtn").addEventListener("click", async () => {
-  const name = $("newObjectName").value.trim();
-  if(!name) return;
-  await addDoc(collection(db,"objects"), {name, active:true, createdAt:serverTimestamp()});
-  $("newObjectName").value = "";
-});
-
-$("addPanelBtn").addEventListener("click", async () => {
-  const name = $("newPanelName").value.trim();
-  const objectId = $("newPanelObject").value;
-  const factoryId = $("newPanelFactory").value;
-  if(!name || !objectId || !factoryId) return;
-
-  await addDoc(collection(db,"panels"), {
-    name, objectId, factoryId,
-    status:"Nav sākts",
-    photoCount:0,
+  await addDoc(collection(db,"objects"),{
+    name,
+    active:true,
     createdAt:serverTimestamp()
   });
-  $("newPanelName").value = "";
+
+  $("objectName").value = "";
+  $("objectMessage").textContent = "Objekts izveidots.";
+  $("objectMessage").className = "message success";
 });
 
-$("startBtn").addEventListener("click", async () => {
-  const panelId = $("panelSelect").value;
-  const workerId = $("workerSelect").value;
-  const panel = byId(state.panels,panelId);
-  const worker = byId(state.workers,workerId);
-  if(!panel || !worker) return;
+$("previewBtn").addEventListener("click", async ()=>{
+  const file = $("excelFile").files[0];
+  if(!file){
+    $("importStatus").textContent = "Izvēlies Excel failu.";
+    $("importStatus").className = "message error";
+    return;
+  }
 
   try{
-    const jobId = await runTransaction(db, async transaction => {
-      const panelRef = doc(db,"panels",panelId);
-      const panelSnapshot = await transaction.get(panelRef);
-      const latestPanel = panelSnapshot.data();
+    const buffer = await file.arrayBuffer();
+    const workbook = XLSX.read(buffer,{type:"array"});
+    const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+    const rows = XLSX.utils.sheet_to_json(firstSheet,{defval:null,raw:true});
+    const fallbackFactory = $("defaultFactory").value;
 
-      if(latestPanel.status === "Procesā" || latestPanel.status === "Pauzē"){
-        throw new Error("Šis panelis jau tiek ražots.");
-      }
+    state.previewRows = rows
+      .map(row=>mapRow(row,fallbackFactory))
+      .filter(row=>row.panelName || row.designation || row.errors.length);
 
-      const jobRef = doc(collection(db,"jobs"));
-      transaction.set(jobRef,{
-        panelId,
-        panelName:latestPanel.name,
-        objectId:latestPanel.objectId,
-        factoryId:latestPanel.factoryId,
-        workerId,
-        workerName:worker.name,
-        note:$("noteInput").value.trim(),
-        status:"Procesā",
-        startAt:serverTimestamp(),
-        lastResumeAt:serverTimestamp(),
-        accumulatedSeconds:0,
-        endAt:null,
-        createdAt:serverTimestamp()
-      });
-      transaction.update(panelRef,{
-        status:"Procesā",
-        activeJobId:jobRef.id
-      });
-      return jobRef.id;
-    });
-
-    state.activeJobId = jobId;
-    localStorage.setItem("pps_active_job",jobId);
-    $("noteInput").value = "";
+    renderPreview();
+    $("importStatus").textContent = "Fails pārbaudīts. Pārskati priekšskatījumu.";
+    $("importStatus").className = "message success";
   }catch(error){
-    alert(error.message);
+    $("importStatus").textContent = "Neizdevās nolasīt failu: " + error.message;
+    $("importStatus").className = "message error";
   }
 });
 
-$("pauseBtn").addEventListener("click", async () => {
-  const job = activeJob();
-  if(!job) return;
+$("importBtn").addEventListener("click", async ()=>{
+  const objectId = $("objectSelect").value;
+  if(!objectId) return;
 
-  const jobRef = doc(db,"jobs",job.id);
-  const panelRef = doc(db,"panels",job.panelId);
+  const validRows = state.previewRows.filter(r=>r.valid);
+  if(!validRows.length) return;
 
-  if(job.status === "Procesā"){
-    await updateDoc(jobRef,{
-      status:"Pauzē",
-      accumulatedSeconds:elapsed(job),
-      lastResumeAt:null
-    });
-    await updateDoc(panelRef,{status:"Pauzē"});
-  }else{
-    await updateDoc(jobRef,{
-      status:"Procesā",
-      lastResumeAt:serverTimestamp()
-    });
-    await updateDoc(panelRef,{status:"Procesā"});
-  }
-});
-
-$("finishBtn").addEventListener("click", async () => {
-  const job = activeJob();
-  if(!job || !confirm(`Pabeigt paneli ${job.panelName}?`)) return;
-
-  await updateDoc(doc(db,"jobs",job.id),{
-    status:"Pabeigts",
-    accumulatedSeconds:elapsed(job),
-    lastResumeAt:null,
-    endAt:serverTimestamp()
-  });
-  await updateDoc(doc(db,"panels",job.panelId),{
-    status:"Pabeigts",
-    activeJobId:null
-  });
-
-  state.activeJobId = null;
-  localStorage.removeItem("pps_active_job");
-  renderAll();
-});
-
-$("uploadPhotoBtn").addEventListener("click", async () => {
-  const job = activeJob();
-  const file = $("photoInput").files[0];
-  if(!job) return alert("Nav aktīva paneļa.");
-  if(!file) return alert("Izvēlies foto.");
-
-  $("photoStatus").textContent = "Augšupielādē foto…";
+  $("importBtn").disabled = true;
+  $("importStatus").textContent = "Importē paneļus…";
+  $("importStatus").className = "message";
 
   try{
-    const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g,"_");
-    const storagePath =
-      `photos/${job.objectId}/${job.panelId}/${Date.now()}_${safeName}`;
-    const storageRef = ref(storage,storagePath);
+    const existingSnapshot = await getDocs(query(collection(db,"panels"),where("objectId","==",objectId)));
+    const existingNames = new Set(
+      existingSnapshot.docs.map(d=>String(d.data().panelName||"").toLowerCase())
+    );
 
-    await uploadBytes(storageRef,file);
-    const url = await getDownloadURL(storageRef);
+    const rowsToImport = validRows.filter(r=>!existingNames.has(r.panelName.toLowerCase()));
+    const duplicates = validRows.length - rowsToImport.length;
 
-    await addDoc(collection(db,"photos"),{
-      panelId:job.panelId,
-      objectId:job.objectId,
-      factoryId:job.factoryId,
-      jobId:job.id,
-      workerId:job.workerId,
-      workerName:job.workerName,
-      comment:$("photoComment").value.trim(),
-      url,
-      storagePath,
-      createdAt:serverTimestamp()
-    });
+    let imported = 0;
+    for(let start=0; start<rowsToImport.length; start+=450){
+      const batch = writeBatch(db);
+      const part = rowsToImport.slice(start,start+450);
+      part.forEach(row=>{
+        const panelRef = doc(collection(db,"panels"));
+        batch.set(panelRef,{
+          ...row,
+          objectId,
+          importSource:"Excel",
+          importedAt:serverTimestamp()
+        });
+      });
+      await batch.commit();
+      imported += part.length;
+    }
 
-    const panel = byId(state.panels,job.panelId);
-    await updateDoc(doc(db,"panels",job.panelId),{
-      photoCount:(panel?.photoCount || 0) + 1
-    });
-
-    $("photoInput").value = "";
-    $("photoComment").value = "";
-    $("photoStatus").textContent = "Foto pievienots.";
+    $("importStatus").textContent =
+      `Imports pabeigts. Pievienoti ${imported} paneļi. Izlaisti dublikāti: ${duplicates}.`;
+    $("importStatus").className = "message success";
+    state.previewRows = [];
+    $("previewCard").classList.add("hidden");
+    $("excelFile").value = "";
   }catch(error){
-    $("photoStatus").textContent =
-      "Foto kļūda: " + error.message +
-      " (pārbaudi Firebase Storage un Storage Rules)";
+    $("importStatus").textContent = "Importa kļūda: " + error.message;
+    $("importStatus").className = "message error";
+  }finally{
+    $("importBtn").disabled = false;
   }
 });
 
-setInterval(() => {
-  const job = activeJob();
-  if(job) $("timer").textContent = hms(elapsed(job));
-  renderOverview();
-},1000);
+$("panelObjectFilter").addEventListener("change",renderPanels);
+$("panelSearch").addEventListener("input",renderPanels);
+$("objectSelect").addEventListener("change",()=>{
+  $("importBtn").disabled = !state.previewRows.some(r=>r.valid) || !$("objectSelect").value;
+});
 
-renderAll();
+document.querySelectorAll(".tab").forEach(button=>{
+  button.addEventListener("click",()=>{
+    document.querySelectorAll(".tab").forEach(b=>b.classList.remove("active"));
+    button.classList.add("active");
+    document.querySelectorAll(".view").forEach(v=>v.classList.add("hidden"));
+    $(button.dataset.view+"View").classList.remove("hidden");
+  });
+});
