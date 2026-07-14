@@ -68,6 +68,14 @@
 
         <div id="timer">00:00:00</div>
 
+        <div class="photo-box">
+          <h3>Pievienot foto panelim</h3>
+          <input id="photoInput" type="file" accept="image/*" capture="environment">
+          <textarea id="photoComment" rows="2" placeholder="Komentārs pie foto"></textarea>
+          <button id="uploadPhotoBtn" class="secondary large">PIEVIENOT FOTO</button>
+          <div id="photoStatus" class="message"></div>
+        </div>
+
         <div class="actions">
           <button id="pauseBtn" class="warning">PAUZE</button>
           <button id="finishBtn" class="danger">PABEIGT</button>
@@ -98,14 +106,8 @@
         <table>
           <thead>
             <tr>
-              <th>Rūpnīca</th>
-              <th>Objekts</th>
-              <th>Panelis</th>
-              <th>Darbinieks</th>
-              <th>Statuss</th>
-              <th>Sākums</th>
-              <th>Beigas</th>
-              <th>Ilgums</th>
+              <th>Rūpnīca</th><th>Objekts</th><th>Panelis</th><th>Darbinieks</th>
+              <th>Statuss</th><th>Sākums</th><th>Beigas</th><th>Ilgums</th><th>Foto</th>
             </tr>
           </thead>
           <tbody id="overviewBody"></tbody>
@@ -126,19 +128,14 @@
 
     <article class="card">
       <h2>Importēt paneļus no Excel</h2>
-
       <label for="importObject">Objekts</label>
       <select id="importObject"></select>
-
       <label for="defaultFactory">Rūpnīca, ja Excel kolonna “Rūpnīca” ir tukša</label>
       <select id="defaultFactory"></select>
-
       <label for="excelFile">Excel fails</label>
       <input id="excelFile" type="file" accept=".xlsx,.xls,.csv">
-
       <button id="previewBtn" class="secondary large">PĀRBAUDĪT FAILU</button>
       <button id="importBtn" class="primary large" disabled>IMPORTĒT PANEĻUS</button>
-
       <div id="importStatus" class="message"></div>
     </article>
 
@@ -172,7 +169,6 @@
           <input id="newFactoryName" placeholder="Piemēram, Ventspils">
           <button id="addFactoryBtn" class="secondary">PIEVIENOT</button>
         </div>
-
         <div class="admin-box">
           <h3>Pievienot darbinieku</h3>
           <input id="newWorkerName" placeholder="Darbinieka vārds">
