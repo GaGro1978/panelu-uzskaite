@@ -1,19 +1,36 @@
-PANEĻU RAŽOŠANAS UZSKAITE
+PPS FULL MVP V1
 
-Ātra palaišana datorā:
-1. Atver mapi terminālī.
-2. Palaid:
-   python -m http.server 8000
-3. Pārlūkā atver:
-   http://localhost:8000
+IESPĒJAS
+- Kopīga Firebase Firestore datubāze.
+- Vairākas rūpnīcas.
+- Darbinieki piesaistīti rūpnīcām.
+- Kopīgi objekti.
+- Paneļi piesaistīti objektam un konkrētai rūpnīcai.
+- Vairāki telefoni vienlaikus.
+- Reāllaika pārskats.
+- Vienu paneli nevar sākt divreiz.
+- Sākt / Pauze / Turpināt / Pabeigt.
+- Foto uz Firebase Storage.
+- Foto skaits pie paneļa.
 
-Telefonā:
-- Telefonam un datoram jābūt vienā Wi-Fi tīklā.
-- Datorā noskaidro lokālo IP adresi, piemēram 192.168.1.25.
-- Telefonā atver http://192.168.1.25:8000
-- Chrome izvēlnē izvēlies "Add to Home screen" / "Pievienot sākuma ekrānam".
+GITHUB
+GitHub repozitorijā aizvieto VISUS šos failus:
+- index.html
+- styles.css
+- app.js
+- manifest.json
+- service-worker.js
 
-Svarīgi:
-- Šī prototipa dati glabājas konkrētās ierīces pārlūkā (localStorage).
-- Dati starp vairākiem telefoniem vēl nesinhronizējas.
-- CSV eksportu var atvērt Excel.
+FIRESTORE
+Firebase > Firestore Database > Rules:
+iekopē firestore-rules.txt saturu un nospied Publish.
+
+STORAGE FOTO
+Firebase > Storage:
+1. Izveido Storage bucket.
+2. Storage > Rules:
+   iekopē storage-rules.txt saturu un nospied Publish.
+
+SVARĪGI
+Šie ir pagaidu izstrādes noteikumi līdz 30.09.2026.
+Pirms reālas ilgtermiņa lietošanas jāievieš autentifikācija un drošāki noteikumi.
