@@ -4,28 +4,119 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#111827">
-  <title>PPS — Paneļu imports</title>
+  <title>PPS — Paneļu ražošana</title>
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
 <header>
   <div>
     <h1>PPS</h1>
-    <p>1. modulis — objekti un paneļu imports</p>
+    <p>Paneļu ražošanas uzskaite</p>
   </div>
   <span id="connectionBadge" class="badge waiting">Savienojas…</span>
 </header>
 
 <nav>
-  <button class="tab active" data-view="import">Imports</button>
-  <button class="tab" data-view="panels">Paneļi</button>
+  <button class="tab active" data-view="production">Ražošana</button>
+  <button class="tab" data-view="overview">Pārskats</button>
+  <button class="tab" data-view="import">Imports</button>
+  <button class="tab" data-view="admin">Pārvaldība</button>
 </nav>
 
 <main>
-  <section id="importView" class="view">
+  <section id="productionView" class="view">
     <article class="card">
-      <h2>1. Izveido objektu</h2>
-      <label for="objectName">Objekta nosaukums</label>
+      <h2>Darba sākšana</h2>
+
+      <label for="prodFactory">Rūpnīca</label>
+      <select id="prodFactory"></select>
+
+      <label for="prodWorker">Darbinieks</label>
+      <select id="prodWorker"></select>
+
+      <label for="prodObject">Objekts</label>
+      <select id="prodObject"></select>
+
+      <label for="panelSearch">Meklēt paneli</label>
+      <input id="panelSearch" placeholder="Piemēram, 1SB-01">
+
+      <label for="prodPanel">Panelis</label>
+      <select id="prodPanel"></select>
+
+      <label for="prodNote">Piezīme</label>
+      <textarea id="prodNote" rows="2" placeholder="Nav obligāta"></textarea>
+
+      <button id="startBtn" class="primary large">SĀKT RAŽOŠANU</button>
+      <div id="startMessage" class="message"></div>
+    </article>
+
+    <article class="card">
+      <div class="title-row">
+        <h2>Aktīvais darbs</h2>
+        <span id="activeBadge" class="badge muted">Nav aktīvs</span>
+      </div>
+
+      <div id="noActive" class="empty">Šajā ierīcē nav aktīva darba.</div>
+
+      <div id="activeBlock" class="hidden">
+        <div class="info-grid">
+          <div><span>Rūpnīca</span><strong id="activeFactory">—</strong></div>
+          <div><span>Objekts</span><strong id="activeObject">—</strong></div>
+          <div><span>Panelis</span><strong id="activePanel">—</strong></div>
+          <div><span>Darbinieks</span><strong id="activeWorker">—</strong></div>
+        </div>
+
+        <div id="timer">00:00:00</div>
+
+        <div class="actions">
+          <button id="pauseBtn" class="warning">PAUZE</button>
+          <button id="finishBtn" class="danger">PABEIGT</button>
+        </div>
+      </div>
+    </article>
+  </section>
+
+  <section id="overviewView" class="view hidden">
+    <article class="card">
+      <div class="title-row wrap">
+        <h2>Ražošanas pārskats</h2>
+        <div class="filters">
+          <select id="overviewFactory"></select>
+          <select id="overviewObject"></select>
+          <input id="overviewSearch" placeholder="Meklēt paneli">
+        </div>
+      </div>
+
+      <div class="summary-grid">
+        <div><span>Nav sākts</span><strong id="countNotStarted">0</strong></div>
+        <div><span>Procesā</span><strong id="countRunning">0</strong></div>
+        <div><span>Pauzē</span><strong id="countPaused">0</strong></div>
+        <div><span>Pabeigts</span><strong id="countDone">0</strong></div>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Rūpnīca</th>
+              <th>Objekts</th>
+              <th>Panelis</th>
+              <th>Darbinieks</th>
+              <th>Statuss</th>
+              <th>Sākums</th>
+              <th>Beigas</th>
+              <th>Ilgums</th>
+            </tr>
+          </thead>
+          <tbody id="overviewBody"></tbody>
+        </table>
+      </div>
+    </article>
+  </section>
+
+  <section id="importView" class="view hidden">
+    <article class="card">
+      <h2>Izveidot objektu</h2>
       <div class="row">
         <input id="objectName" placeholder="Piemēram, Islande 01">
         <button id="createObjectBtn" class="primary">IZVEIDOT</button>
@@ -34,18 +125,13 @@
     </article>
 
     <article class="card">
-      <h2>2. Importē paneļus no Excel</h2>
+      <h2>Importēt paneļus no Excel</h2>
 
-      <label for="objectSelect">Objekts</label>
-      <select id="objectSelect"></select>
+      <label for="importObject">Objekts</label>
+      <select id="importObject"></select>
 
       <label for="defaultFactory">Rūpnīca, ja Excel kolonna “Rūpnīca” ir tukša</label>
-      <select id="defaultFactory">
-        <option value="">— nav piešķirta —</option>
-        <option value="Ventspils">Ventspils</option>
-        <option value="Jēkabpils">Jēkabpils</option>
-        <option value="Balvi">Balvi</option>
-      </select>
+      <select id="defaultFactory"></select>
 
       <label for="excelFile">Excel fails</label>
       <input id="excelFile" type="file" accept=".xlsx,.xls,.csv">
@@ -66,16 +152,9 @@
         <table>
           <thead>
             <tr>
-              <th>Statuss</th>
-              <th>Panelis</th>
-              <th>Skaits</th>
-              <th>Garums</th>
-              <th>Biezums</th>
-              <th>Augstums</th>
-              <th>Svars</th>
-              <th>Platība</th>
-              <th>Tips</th>
-              <th>Rūpnīca</th>
+              <th>Statuss</th><th>Panelis</th><th>Skaits</th><th>Garums</th>
+              <th>Biezums</th><th>Augstums</th><th>Svars</th><th>Platība</th>
+              <th>Tips</th><th>Rūpnīca</th>
             </tr>
           </thead>
           <tbody id="previewBody"></tbody>
@@ -84,41 +163,32 @@
     </article>
   </section>
 
-  <section id="panelsView" class="view hidden">
+  <section id="adminView" class="view hidden">
     <article class="card">
-      <div class="title-row wrap">
-        <h2>Importētie paneļi</h2>
-        <div class="filters">
-          <select id="panelObjectFilter"></select>
-          <input id="panelSearch" placeholder="Meklēt paneli...">
+      <h2>Rūpnīcas un darbinieki</h2>
+      <div class="admin-grid">
+        <div class="admin-box">
+          <h3>Pievienot rūpnīcu</h3>
+          <input id="newFactoryName" placeholder="Piemēram, Ventspils">
+          <button id="addFactoryBtn" class="secondary">PIEVIENOT</button>
+        </div>
+
+        <div class="admin-box">
+          <h3>Pievienot darbinieku</h3>
+          <input id="newWorkerName" placeholder="Darbinieka vārds">
+          <select id="newWorkerFactory"></select>
+          <button id="addWorkerBtn" class="secondary">PIEVIENOT</button>
         </div>
       </div>
+      <div id="adminMessage" class="message"></div>
+    </article>
 
-      <div class="summary-grid">
-        <div><span>Kopā</span><strong id="totalPanels">0</strong></div>
-        <div><span>Ventspils</span><strong id="ventsCount">0</strong></div>
-        <div><span>Jēkabpils</span><strong id="jekCount">0</strong></div>
-        <div><span>Balvi</span><strong id="balviCount">0</strong></div>
-      </div>
-
+    <article class="card">
+      <h2>Esošie darbinieki</h2>
       <div class="table-wrap">
         <table>
-          <thead>
-            <tr>
-              <th>Objekts</th>
-              <th>Panelis</th>
-              <th>Skaits</th>
-              <th>Garums</th>
-              <th>Biezums</th>
-              <th>Augstums</th>
-              <th>Svars</th>
-              <th>Platība</th>
-              <th>Tips</th>
-              <th>Rūpnīca</th>
-              <th>Statuss</th>
-            </tr>
-          </thead>
-          <tbody id="panelsBody"></tbody>
+          <thead><tr><th>Darbinieks</th><th>Rūpnīca</th></tr></thead>
+          <tbody id="workersBody"></tbody>
         </table>
       </div>
     </article>
