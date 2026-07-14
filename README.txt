@@ -1,36 +1,16 @@
-PPS FULL MVP V1
+PPS — 4. MODULIS: PĀRSKATI UN EKSPORTS
 
-IESPĒJAS
-- Kopīga Firebase Firestore datubāze.
-- Vairākas rūpnīcas.
-- Darbinieki piesaistīti rūpnīcām.
-- Kopīgi objekti.
-- Paneļi piesaistīti objektam un konkrētai rūpnīcai.
-- Vairāki telefoni vienlaikus.
-- Reāllaika pārskats.
-- Vienu paneli nevar sākt divreiz.
-- Sākt / Pauze / Turpināt / Pabeigt.
-- Foto uz Firebase Storage.
-- Foto skaits pie paneļa.
+Jaunumi:
+- periods: šodien, vakar, šonedēļ, šomēnes, viss periods;
+- filtrs pēc rūpnīcas;
+- filtrs pēc objekta;
+- filtrs pēc darbinieka;
+- meklēšana pēc paneļa;
+- kopējais darba laiks;
+- CSV eksports ar pašreizējiem filtriem.
 
 GITHUB
-GitHub repozitorijā aizvieto VISUS šos failus:
+Aizvieto:
 - index.html
 - styles.css
 - app.js
-- manifest.json
-- service-worker.js
-
-FIRESTORE
-Firebase > Firestore Database > Rules:
-iekopē firestore-rules.txt saturu un nospied Publish.
-
-STORAGE FOTO
-Firebase > Storage:
-1. Izveido Storage bucket.
-2. Storage > Rules:
-   iekopē storage-rules.txt saturu un nospied Publish.
-
-SVARĪGI
-Šie ir pagaidu izstrādes noteikumi līdz 30.09.2026.
-Pirms reālas ilgtermiņa lietošanas jāievieš autentifikācija un drošāki noteikumi.

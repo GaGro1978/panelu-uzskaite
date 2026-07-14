@@ -68,14 +68,6 @@
 
         <div id="timer">00:00:00</div>
 
-        <div class="photo-box">
-          <h3>Pievienot foto panelim</h3>
-          <input id="photoInput" type="file" accept="image/*" capture="environment">
-          <textarea id="photoComment" rows="2" placeholder="Komentārs pie foto"></textarea>
-          <button id="uploadPhotoBtn" class="secondary large">PIEVIENOT FOTO</button>
-          <div id="photoStatus" class="message"></div>
-        </div>
-
         <div class="actions">
           <button id="pauseBtn" class="warning">PAUZE</button>
           <button id="finishBtn" class="danger">PABEIGT</button>
@@ -88,9 +80,34 @@
     <article class="card">
       <div class="title-row wrap">
         <h2>Ražošanas pārskats</h2>
-        <div class="filters">
+        <button id="exportCsvBtn" class="secondary">EKSPORTĒT CSV</button>
+      </div>
+
+      <div class="report-filters">
+        <div>
+          <label for="datePreset">Periods</label>
+          <select id="datePreset">
+            <option value="today">Šodien</option>
+            <option value="yesterday">Vakar</option>
+            <option value="week">Šonedēļ</option>
+            <option value="month">Šomēnes</option>
+            <option value="all">Viss periods</option>
+          </select>
+        </div>
+        <div>
+          <label for="overviewFactory">Rūpnīca</label>
           <select id="overviewFactory"></select>
+        </div>
+        <div>
+          <label for="overviewObject">Objekts</label>
           <select id="overviewObject"></select>
+        </div>
+        <div>
+          <label for="overviewWorker">Darbinieks</label>
+          <select id="overviewWorker"></select>
+        </div>
+        <div>
+          <label for="overviewSearch">Panelis</label>
           <input id="overviewSearch" placeholder="Meklēt paneli">
         </div>
       </div>
@@ -100,6 +117,7 @@
         <div><span>Procesā</span><strong id="countRunning">0</strong></div>
         <div><span>Pauzē</span><strong id="countPaused">0</strong></div>
         <div><span>Pabeigts</span><strong id="countDone">0</strong></div>
+        <div><span>Kopējais laiks</span><strong id="totalTime">00:00:00</strong></div>
       </div>
 
       <div class="table-wrap">
@@ -107,7 +125,7 @@
           <thead>
             <tr>
               <th>Rūpnīca</th><th>Objekts</th><th>Panelis</th><th>Darbinieks</th>
-              <th>Statuss</th><th>Sākums</th><th>Beigas</th><th>Ilgums</th><th>Foto</th>
+              <th>Statuss</th><th>Sākums</th><th>Beigas</th><th>Ilgums</th>
             </tr>
           </thead>
           <tbody id="overviewBody"></tbody>

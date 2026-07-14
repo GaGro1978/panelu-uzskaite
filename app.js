@@ -3,9 +3,6 @@ import {
   getFirestore, collection, addDoc, getDocs, onSnapshot, serverTimestamp,
   writeBatch, doc, query, where, runTransaction, updateDoc
 } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
-import {
-  getStorage, ref, uploadBytes, getDownloadURL
-} from "https://www.gstatic.com/firebasejs/12.0.0/firebase-storage.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyCl6Bwf2oIMnDWKY-cZZUOJtWsJNcWr1nk",
@@ -18,7 +15,6 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
-const storage = getStorage(app);
 const $ = id => document.getElementById(id);
 
 const state = {
@@ -44,7 +40,6 @@ function fill(select,items,allLabel=null){
 function normalizeHeader(v){return String(v??"").trim().toLowerCase().replace(/\s+/g," ").replace(/[.]/g,"").normalize("NFD").replace(/[\u0300-\u036f]/g,"")}
 function parseNumber(v){if(v===null||v===undefined||v==="")return null;if(typeof v==="number")return v;const n=Number(String(v).replace(/\s/g,"").replace(",",".").replace(/[^\d.-]/g,""));return Number.isFinite(n)?n:null}
 function findField(row,aliases){const keys=Object.keys(row);for(const alias of aliases){const key=keys.find(k=>normalizeHeader(k)===normalizeHeader(alias));if(key!==undefined)return row[key]}return null}
-
 function mapRow(row,defaultFactoryName){
   const panelName=String(findField(row,["Pan. Nr","Pan Nr","Panelis","Panel Nr"])??"").trim();
   const pcs=parseNumber(findField(row,["PCS","Skaits"]))??1;
@@ -57,7 +52,7 @@ function mapRow(row,defaultFactoryName){
   const excelFactory=String(findField(row,["Rūpnīca","Rupnica","Factory"])??"").trim();
   const factoryName=excelFactory||defaultFactoryName||"";
   const errors=[];if(!panelName)errors.push("Nav paneļa numura");if(pcs<=0)errors.push("Nederīgs skaits");
-  return {panelName,pcs,length,width,height,weight,grossArea,designation,factoryName,status:"Nav sākts",photoCount:0,errors,valid:errors.length===0};
+  return {panelName,pcs,length,width,height,weight,grossArea,designation,factoryName,status:"Nav sākts",errors,valid:errors.length===0};
 }
 
 function renderSelectors(){
@@ -71,6 +66,7 @@ function renderSelectors(){
   fill($("prodPanel"),panels.map(p=>({...p,name:p.panelName})));
   fill($("overviewFactory"),state.factories,"Visas rūpnīcas");
   fill($("overviewObject"),state.objects,"Visi objekti");
+  fill($("overviewWorker"),state.workers,"Visi darbinieki");
   fill($("importObject"),state.objects);
   fill($("defaultFactory"),state.factories,"— nav piešķirta —");
   fill($("newWorkerFactory"),state.factories);
@@ -93,17 +89,58 @@ function renderActive(){
   $("pauseBtn").textContent=j.status==="Pauzē"?"TURPINĀT":"PAUZE";$("timer").textContent=hms(elapsed(j));
 }
 
+function getPeriodRange(preset){
+  const now=new Date();
+  const start=new Date(now);
+  const end=new Date(now);
+  if(preset==="today"){
+    start.setHours(0,0,0,0);end.setHours(23,59,59,999);
+  }else if(preset==="yesterday"){
+    start.setDate(start.getDate()-1);start.setHours(0,0,0,0);
+    end.setDate(end.getDate()-1);end.setHours(23,59,59,999);
+  }else if(preset==="week"){
+    const day=(start.getDay()+6)%7;
+    start.setDate(start.getDate()-day);start.setHours(0,0,0,0);
+    end.setHours(23,59,59,999);
+  }else if(preset==="month"){
+    start.setDate(1);start.setHours(0,0,0,0);
+    end.setHours(23,59,59,999);
+  }else{
+    return null;
+  }
+  return {start,end};
+}
+
+function filteredRows(){
+  const ff=$("overviewFactory").value,fo=$("overviewObject").value,fw=$("overviewWorker").value;
+  const s=$("overviewSearch").value.trim().toLowerCase();
+  const range=getPeriodRange($("datePreset").value);
+
+  return state.panels
+    .filter(p=>(!ff||p.factoryId===ff)&&(!fo||p.objectId===fo)&&(!s||String(p.panelName||"").toLowerCase().includes(s)))
+    .map(p=>{
+      const jobs=state.jobs.filter(j=>j.panelId===p.id);
+      const job=jobs.find(j=>j.status!=="Pabeigts")||[...jobs].sort((a,b)=>(toDate(a.startAt)?.getTime()||0)-(toDate(b.startAt)?.getTime()||0)).at(-1);
+      return {panel:p,job};
+    })
+    .filter(({job})=>{
+      if(fw && job?.workerId!==fw)return false;
+      if(!range)return true;
+      const d=toDate(job?.startAt);
+      return d && d>=range.start && d<=range.end;
+    });
+}
+
 function renderOverview(){
-  const ff=$("overviewFactory").value,fo=$("overviewObject").value,s=$("overviewSearch").value.trim().toLowerCase();
-  const panels=state.panels.filter(p=>(!ff||p.factoryId===ff)&&(!fo||p.objectId===fo)&&(!s||String(p.panelName||"").toLowerCase().includes(s)));
-  const c={n:0,r:0,p:0,d:0};
-  panels.forEach(p=>{if(p.status==="Procesā")c.r++;else if(p.status==="Pauzē")c.p++;else if(p.status==="Pabeigts")c.d++;else c.n++});
-  $("countNotStarted").textContent=c.n;$("countRunning").textContent=c.r;$("countPaused").textContent=c.p;$("countDone").textContent=c.d;
+  const rows=filteredRows();
+  const c={n:0,r:0,p:0,d:0};let total=0;
+  rows.forEach(({panel,job})=>{if(panel.status==="Procesā")c.r++;else if(panel.status==="Pauzē")c.p++;else if(panel.status==="Pabeigts")c.d++;else c.n++;if(job)total+=elapsed(job)});
+  $("countNotStarted").textContent=c.n;$("countRunning").textContent=c.r;$("countPaused").textContent=c.p;$("countDone").textContent=c.d;$("totalTime").textContent=hms(total);
+
   const body=$("overviewBody");body.innerHTML="";
-  panels.forEach(p=>{
-    const job=state.jobs.find(j=>j.panelId===p.id&&j.status!=="Pabeigts")||[...state.jobs].reverse().find(j=>j.panelId===p.id);
+  rows.forEach(({panel:p,job})=>{
     const tr=document.createElement("tr");
-    tr.innerHTML=`<td>${byId(state.factories,p.factoryId)?.name||p.factoryName||"—"}</td><td>${byId(state.objects,p.objectId)?.name||"—"}</td><td><strong>${p.panelName}</strong></td><td>${job?.workerName||"—"}</td><td>${p.status||"Nav sākts"}</td><td>${formatDate(job?.startAt)}</td><td>${formatDate(job?.endAt)}</td><td>${job?hms(elapsed(job)):"—"}</td><td>${p.photoCount||0}</td>`;
+    tr.innerHTML=`<td>${byId(state.factories,p.factoryId)?.name||p.factoryName||"—"}</td><td>${byId(state.objects,p.objectId)?.name||"—"}</td><td><strong>${p.panelName}</strong></td><td>${job?.workerName||"—"}</td><td>${p.status||"Nav sākts"}</td><td>${formatDate(job?.startAt)}</td><td>${formatDate(job?.endAt)}</td><td>${job?hms(elapsed(job)):"—"}</td>`;
     body.appendChild(tr);
   });
 }
@@ -114,8 +151,29 @@ function renderPreview(){
   $("previewCount").textContent=`${state.previewRows.length} rindas`;$("validationSummary").innerHTML=`<strong>Derīgas:</strong> ${valid} &nbsp; | &nbsp; <strong>Kļūdainas:</strong> ${invalid}`;
   $("previewCard").classList.remove("hidden");$("importBtn").disabled=valid===0||!$("importObject").value;
 }
-function renderAll(){renderSelectors();renderWorkers();renderActive();renderOverview()}
 
+function exportCsv(){
+  const rows=filteredRows();
+  const header=["Rūpnīca","Objekts","Panelis","Darbinieks","Statuss","Sākums","Beigas","Ilgums"];
+  const data=rows.map(({panel:p,job})=>[
+    byId(state.factories,p.factoryId)?.name||p.factoryName||"",
+    byId(state.objects,p.objectId)?.name||"",
+    p.panelName||"",
+    job?.workerName||"",
+    p.status||"Nav sākts",
+    formatDate(job?.startAt),
+    formatDate(job?.endAt),
+    job?hms(elapsed(job)):""
+  ]);
+  const csv=[header,...data].map(row=>row.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(";")).join("\n");
+  const blob=new Blob(["\uFEFF"+csv],{type:"text/csv;charset=utf-8"});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement("a");
+  a.href=url;a.download=`PPS_parskats_${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();URL.revokeObjectURL(url);
+}
+
+function renderAll(){renderSelectors();renderWorkers();renderActive();renderOverview()}
 function subscribe(name,key){
   onSnapshot(collection(db,name),snap=>{
     state[key]=snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(a.name||a.panelName||"").localeCompare(b.name||b.panelName||"","lv"));
@@ -127,8 +185,9 @@ subscribe("factories","factories");subscribe("workers","workers");subscribe("obj
 document.querySelectorAll(".tab").forEach(b=>b.addEventListener("click",()=>{document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));b.classList.add("active");document.querySelectorAll(".view").forEach(v=>v.classList.add("hidden"));$(b.dataset.view+"View").classList.remove("hidden")}));
 ["prodFactory","prodObject"].forEach(id=>$(id).addEventListener("change",renderSelectors));
 $("panelSearch").addEventListener("input",renderSelectors);
-["overviewFactory","overviewObject"].forEach(id=>$(id).addEventListener("change",renderOverview));
+["datePreset","overviewFactory","overviewObject","overviewWorker"].forEach(id=>$(id).addEventListener("change",renderOverview));
 $("overviewSearch").addEventListener("input",renderOverview);
+$("exportCsvBtn").addEventListener("click",exportCsv);
 
 $("addFactoryBtn").addEventListener("click",async()=>{const name=$("newFactoryName").value.trim();if(!name)return;if(state.factories.some(f=>f.name.toLowerCase()===name.toLowerCase()))return alert("Šāda rūpnīca jau eksistē.");await addDoc(collection(db,"factories"),{name,createdAt:serverTimestamp()});$("newFactoryName").value=""});
 $("addWorkerBtn").addEventListener("click",async()=>{const name=$("newWorkerName").value.trim(),factoryId=$("newWorkerFactory").value;if(!name||!factoryId)return;await addDoc(collection(db,"workers"),{name,factoryId,active:true,createdAt:serverTimestamp()});$("newWorkerName").value=""});
@@ -140,33 +199,6 @@ $("importBtn").addEventListener("click",async()=>{const objectId=$("importObject
 $("startBtn").addEventListener("click",async()=>{const panelId=$("prodPanel").value,workerId=$("prodWorker").value,factoryId=$("prodFactory").value,panel=byId(state.panels,panelId),worker=byId(state.workers,workerId);if(!panel||!worker)return;try{const jobId=await runTransaction(db,async tx=>{const pr=doc(db,"panels",panelId),snap=await tx.get(pr),p=snap.data();if(p.status==="Procesā"||p.status==="Pauzē")throw new Error("Šis panelis jau tiek ražots.");const jr=doc(collection(db,"jobs"));tx.set(jr,{panelId,panelName:p.panelName,objectId:p.objectId,factoryId,workerId,workerName:worker.name,note:$("prodNote").value.trim(),status:"Procesā",startAt:serverTimestamp(),lastResumeAt:serverTimestamp(),accumulatedSeconds:0,endAt:null,createdAt:serverTimestamp()});tx.update(pr,{status:"Procesā",factoryId,activeJobId:jr.id});return jr.id});state.activeJobId=jobId;localStorage.setItem("pps_active_job",jobId);$("prodNote").value="";$("startMessage").textContent="Darbs sākts.";$("startMessage").className="message success"}catch(e){$("startMessage").textContent=e.message;$("startMessage").className="message error"}});
 $("pauseBtn").addEventListener("click",async()=>{const j=activeJob();if(!j)return;if(j.status==="Procesā"){await updateDoc(doc(db,"jobs",j.id),{status:"Pauzē",accumulatedSeconds:elapsed(j),lastResumeAt:null});await updateDoc(doc(db,"panels",j.panelId),{status:"Pauzē"})}else{await updateDoc(doc(db,"jobs",j.id),{status:"Procesā",lastResumeAt:serverTimestamp()});await updateDoc(doc(db,"panels",j.panelId),{status:"Procesā"})}});
 $("finishBtn").addEventListener("click",async()=>{const j=activeJob();if(!j||!confirm(`Pabeigt paneli ${j.panelName}?`))return;await updateDoc(doc(db,"jobs",j.id),{status:"Pabeigts",accumulatedSeconds:elapsed(j),lastResumeAt:null,endAt:serverTimestamp()});await updateDoc(doc(db,"panels",j.panelId),{status:"Pabeigts",activeJobId:null,completedAt:serverTimestamp()});state.activeJobId=null;localStorage.removeItem("pps_active_job");renderAll()});
-
-$("uploadPhotoBtn").addEventListener("click",async()=>{
-  const j=activeJob(),file=$("photoInput").files[0];
-  if(!j)return alert("Nav aktīva paneļa.");
-  if(!file)return alert("Izvēlies foto.");
-  $("photoStatus").textContent="Augšupielādē foto...";
-  try{
-    const safe=file.name.replace(/[^a-zA-Z0-9._-]/g,"_");
-    const path=`photos/${j.objectId}/${j.panelId}/${Date.now()}_${safe}`;
-    const storageRef=ref(storage,path);
-    await uploadBytes(storageRef,file);
-    const url=await getDownloadURL(storageRef);
-    await addDoc(collection(db,"photos"),{
-      panelId:j.panelId,objectId:j.objectId,factoryId:j.factoryId,jobId:j.id,
-      workerId:j.workerId,workerName:j.workerName,
-      comment:$("photoComment").value.trim(),
-      url,storagePath:path,createdAt:serverTimestamp()
-    });
-    const panel=byId(state.panels,j.panelId);
-    await updateDoc(doc(db,"panels",j.panelId),{photoCount:(panel?.photoCount||0)+1});
-    $("photoInput").value="";$("photoComment").value="";
-    $("photoStatus").textContent="Foto pievienots.";$("photoStatus").className="message success";
-  }catch(e){
-    $("photoStatus").textContent="Foto kļūda: "+e.message;
-    $("photoStatus").className="message error";
-  }
-});
 
 $("importObject").addEventListener("change",()=>{$("importBtn").disabled=!state.previewRows.some(r=>r.valid)||!$("importObject").value});
 setInterval(()=>{const j=activeJob();if(j)$("timer").textContent=hms(elapsed(j));renderOverview()},1000);
