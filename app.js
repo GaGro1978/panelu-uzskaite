@@ -179,7 +179,7 @@ function renderAssignments(){
   });
 }
 function renderPreview(){const b=$("previewBody");b.innerHTML="";let ok=0,bad=0;S.preview.forEach(r=>{r.valid?ok++:bad++;const tr=document.createElement("tr");tr.innerHTML=`<td>${r.valid?"Derīgs":r.errors.join(", ")}</td><td><strong>${r.panelName||"—"}</strong></td><td>${r.pcs??"—"}</td><td>${r.length??"—"}</td><td>${r.width??"—"}</td><td>${r.height??"—"}</td><td>${r.weight??"—"}</td><td>${r.grossArea??"—"}</td><td>${r.designation||"—"}</td><td>${r.factoryName||"—"}</td>`;b.appendChild(tr)});$("previewCount").textContent=S.preview.length+" rindas";$("previewSummary").textContent=`Derīgas: ${ok} | Kļūdainas: ${bad}`;$("previewCard").classList.remove("hidden");$("importBtn").disabled=!ok||!$("importObject").value}
-function renderAll(){renderIdentity();renderWorker();renderLive();renderReport();renderDataManagement();renderAssignments();fill($("importObject"),S.objects);fill($("defaultFactory"),S.factories,"— nav piešķirta —");fill($("newWorkerFactory"),S.factories)}
+function renderAll(){renderDeleteObjectPanelTool();renderIdentity();renderWorker();renderLive();renderReport();renderDataManagement();renderAssignments();fill($("importObject"),S.objects);fill($("defaultFactory"),S.factories,"— nav piešķirta —");fill($("newWorkerFactory"),S.factories)}
 function sub(name,key){onSnapshot(collection(db,name),snap=>{S[key]=snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(a.name||a.panelName||a.workerName||"").localeCompare(b.name||b.panelName||b.workerName||"","lv"));$("conn").textContent="Tiešsaistē";$("conn").className="badge online";renderAll()},e=>{$("conn").textContent="Nav savienojuma";$("conn").className="badge offline";$("adminMsg").textContent=e.message})}
 sub("factories","factories");sub("workers","workers");sub("objects","objects");sub("panels","panels");sub("sessions","sessions");
 document.querySelectorAll(".tab").forEach(b=>b.onclick=()=>{document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));b.classList.add("active");document.querySelectorAll(".view").forEach(v=>v.classList.add("hidden"));$(b.dataset.v+"View").classList.remove("hidden")});
@@ -234,3 +234,105 @@ if(workerManageSearch){
     });
   });
 }
+
+
+function renderDeleteObjectPanelTool(){
+  const select=document.getElementById("deleteObjectSelect");
+  const confirmInput=document.getElementById("deleteObjectConfirm");
+  const summary=document.getElementById("deleteObjectSummary");
+  const button=document.getElementById("deleteAllObjectPanelsBtn");
+  if(!select||!confirmInput||!summary||!button)return;
+
+  const previous=select.value;
+  select.innerHTML='<option value="">Izvēlies objektu…</option>';
+  S.objects.forEach(o=>{
+    const option=document.createElement("option");
+    option.value=o.id;
+    option.textContent=o.name;
+    select.appendChild(option);
+  });
+  if([...select.options].some(o=>o.value===previous))select.value=previous;
+
+  const object=by(S.objects,select.value);
+  if(!object){
+    summary.textContent="Izvēlies objektu.";
+    button.disabled=true;
+    return;
+  }
+
+  const panels=S.panels.filter(p=>p.objectId===object.id);
+  const activePanels=panels.filter(p=>activeForPanel(p.id).length>0);
+  const panelIds=new Set(panels.map(p=>p.id));
+  const sessions=S.sessions.filter(s=>panelIds.has(s.panelId));
+
+  summary.innerHTML=`Objektā <strong>${object.name}</strong> ir <strong>${panels.length}</strong> paneļi un <strong>${sessions.length}</strong> darba sesijas. Aktīvi paneļi: <strong>${activePanels.length}</strong>.`;
+
+  button.disabled=
+    panels.length===0 ||
+    activePanels.length>0 ||
+    confirmInput.value.trim()!==object.name;
+}
+
+async function deleteAllPanelsForObject(){
+  const select=document.getElementById("deleteObjectSelect");
+  const confirmInput=document.getElementById("deleteObjectConfirm");
+  const button=document.getElementById("deleteAllObjectPanelsBtn");
+  const object=by(S.objects,select?.value);
+
+  if(!object)return alert("Izvēlies objektu.");
+
+  const panels=S.panels.filter(p=>p.objectId===object.id);
+  const activePanels=panels.filter(p=>activeForPanel(p.id).length>0);
+  if(activePanels.length){
+    return alert(`Dzēšanu nevar veikt. ${activePanels.length} paneļiem vēl ir aktīvi darbi.`);
+  }
+  if(confirmInput.value.trim()!==object.name){
+    return alert("Apstiprinājuma teksts nesakrīt ar objekta nosaukumu.");
+  }
+
+  const panelIds=new Set(panels.map(p=>p.id));
+  const sessions=S.sessions.filter(s=>panelIds.has(s.panelId));
+
+  if(!confirm(
+    `Neatgriezeniski dzēst VISUS ${panels.length} objekta "${object.name}" paneļus un ${sessions.length} darba sesijas?\n\nŠo darbību nevar atsaukt.`
+  ))return;
+
+  button.disabled=true;
+  button.textContent="DZĒŠ...";
+
+  try{
+    for(let i=0;i<sessions.length;i+=450){
+      const batch=writeBatch(db);
+      sessions.slice(i,i+450).forEach(s=>batch.delete(doc(db,"sessions",s.id)));
+      await batch.commit();
+    }
+
+    for(let i=0;i<panels.length;i+=450){
+      const batch=writeBatch(db);
+      panels.slice(i,i+450).forEach(p=>batch.delete(doc(db,"panels",p.id)));
+      await batch.commit();
+    }
+
+    confirmInput.value="";
+    alert(`Objekta "${object.name}" paneļi izdzēsti.`);
+  }catch(error){
+    console.error(error);
+    alert("Dzēšanas kļūda: "+error.message);
+  }finally{
+    button.textContent="DZĒST VISUS OBJEKTA PANEĻUS";
+    renderDeleteObjectPanelTool();
+  }
+}
+
+const deleteObjectSelect=document.getElementById("deleteObjectSelect");
+const deleteObjectConfirm=document.getElementById("deleteObjectConfirm");
+const deleteAllObjectPanelsBtn=document.getElementById("deleteAllObjectPanelsBtn");
+
+if(deleteObjectSelect){
+  deleteObjectSelect.addEventListener("change",()=>{
+    if(deleteObjectConfirm)deleteObjectConfirm.value="";
+    renderDeleteObjectPanelTool();
+  });
+}
+if(deleteObjectConfirm)deleteObjectConfirm.addEventListener("input",renderDeleteObjectPanelTool);
+if(deleteAllObjectPanelsBtn)deleteAllObjectPanelsBtn.addEventListener("click",deleteAllPanelsForObject);

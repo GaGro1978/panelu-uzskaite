@@ -1,25 +1,26 @@
-PPS V2.1 — MODERNS UN LIETOTĀJAM DRAUDZĪGS INTERFEISS
+PPS V2.2 — VISU OBJEKTA PANEĻU DZĒŠANA
 
-Galvenās izmaiņas:
-- Pārvaldība sadalīta 4 skaidrās cilnēs:
-  Darbinieki / Rūpnīcas / Paneļi / Pievienot.
-- Darbinieki attēloti kompaktās rindās.
-- Ir darbinieku meklēšana.
-- Darbinieka rūpnīcas maiņa un dzēšana ir vienā rindā.
-- Paneļu filtri un masveida pārcelšana ir vienā rīkjoslā.
-- Paneļu pabeigšana un dzēšana atrodas tajā pašā Paneļu cilnē.
-- Modernizēts viss aplikācijas dizains datoram un telefonam.
-- Darba loģika un Firestore dati nav mainīti.
+Kur atrast:
+- atver Pārvaldība;
+- ritini līdz sarkanajai sadaļai BĪSTAMĀ ZONA;
+- izvēlies objektu;
+- ieraksti precīzu objekta nosaukumu;
+- nospied DZĒST VISUS OBJEKTA PANEĻUS.
 
-GITHUB
-Aizvieto:
+Tiek dzēsti:
+- visi izvēlētā objekta paneļi;
+- visas šo paneļu darba sesijas.
+
+Netiek dzēsti:
+- pats objekts;
+- rūpnīcas;
+- darbinieki.
+
+Dzēšana ir bloķēta, ja kādam paneļa darbam ir statuss Procesā vai Pauzē.
+
+GitHub aizvieto:
 - index.html
 - styles.css
 - app.js
 - cache-reset.js
 - service-worker.js
-
-Pēc Commit:
-1. Aizver visas PPS cilnes.
-2. Atver aplikāciju no jauna.
-3. Nospied Ctrl+Shift+R.
