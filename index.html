@@ -21,10 +21,20 @@
 <article id="previewCard" class="card hidden"><div class="title"><h2>Priekšskatījums</h2><span id="previewCount" class="badge info">0 rindas</span></div><div id="previewSummary" class="hint"></div><div class="tableWrap"><table><thead><tr><th>Statuss</th><th>Panelis</th><th>Skaits</th><th>Garums</th><th>Biezums</th><th>Augstums</th><th>Svars</th><th>Platība</th><th>Tips</th><th>Rūpnīca</th></tr></thead><tbody id="previewBody"></tbody></table></div></article></section>
 
 <section id="adminView" class="view hidden"><article class="card"><h2>Pievienot datus</h2><div class="adminGrid"><div><h3>Rūpnīca</h3><input id="newFactory" placeholder="Ventspils"><button id="addFactory" class="secondary">PIEVIENOT</button></div><div><h3>Darbinieks</h3><input id="newWorker" placeholder="Vārds"><select id="newWorkerFactory"></select><button id="addWorker" class="secondary">PIEVIENOT</button></div></div><div id="adminMsg" class="msg"></div></article>
-<article class="card"><div class="title wrap"><h2>Paneļu piešķiršana</h2><div class="filters"><select id="assignFactory"></select><select id="assignObject"></select><input id="assignSearch" placeholder="Meklēt paneli"></div></div><p class="hint">Var piešķirt vairākus darbiniekus. Ja neviens nav piešķirts, paneli var izvēlēties jebkurš tās rūpnīcas darbinieks.</p><div id="assignList" class="assignList"></div></article>
+<article class="card">
+  <h2>Rūpnīcu un darbinieku pārvaldība</h2>
+  <p class="hint">Darba vēsture pārskatos saglabājas arī pēc darbinieka dzēšanas.</p>
+  <h3>Rūpnīcas</h3>
+  <div id="factoryManage" class="manageList"></div>
+  <h3 class="sectionGap">Darbinieki</h3>
+  <div id="workerManage" class="manageList"></div>
+</article>
+<article class="card"><div class="title wrap"><h2>Paneļu piešķiršana</h2><div class="filters"><select id="assignFactory"></select><select id="assignObject"></select><input id="assignSearch" placeholder="Meklēt paneli"></div></div><p class="hint">Var piešķirt vairākus darbiniekus. Ja neviens nav piešķirts, paneli var izvēlēties jebkurš tās rūpnīcas darbinieks.</p>
+<div class="bulkTransfer">
+  <select id="transferFactory"><option value="">Pārcelt izvēlētos uz rūpnīcu…</option></select>
+  <button id="transferSelected" class="secondary">PĀRCELT IZVĒLĒTOS</button>
+</div>
+<div id="assignList" class="assignList"></div></article>
 <article class="card"><h2>Paneļa pabeigšana</h2><div id="panelAdmin" class="assignList"></div></article></section>
 </main>
-<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="cache-reset.js"></script>
-<script src="dom-guard.js"></script>
-<script type="module" src="app.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script><script src="cache-reset.js"></script><script type="module" src="app.js?v=1.1"></script></body></html>
