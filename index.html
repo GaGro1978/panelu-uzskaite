@@ -48,7 +48,17 @@
 </div>
 <div id="assignList" class="assignList"></div></article>
 <article class="card"><h2>Paneļu pabeigšana un dzēšana</h2><div id="panelAdmin" class="assignList"></div>
-<article class="card dangerZone">
+
+<details class="dangerDetails">
+  <summary>
+    <span>
+      <strong>Dzēst visus objekta paneļus</strong>
+      <small>Izmanto tikai kļūdaina importa gadījumā</small>
+    </span>
+    <span class="dangerTag">BĪSTAMĀ ZONA</span>
+  </summary>
+  <div class="dangerDetailsBody">
+    
   <span class="dangerEyebrow">BĪSTAMĀ ZONA</span>
   <h2>Dzēst visus objekta paneļus</h2>
   <p class="hint">Izmanto tikai tad, ja paneļu saraksts ieimportēts kļūdaini. Tiks dzēsti arī šo paneļu darba sesiju ieraksti.</p>
@@ -64,8 +74,10 @@
   </div>
   <div id="deleteObjectSummary" class="deleteSummary">Izvēlies objektu.</div>
   <button id="deleteAllObjectPanelsBtn" class="danger big" disabled>DZĒST VISUS OBJEKTA PANEĻUS</button>
-</article></article></section>
+
+  </div>
+</details></article></section>
 
 
 </main>
-<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script><script src="cache-reset.js"></script><script type="module" src="app.js?v=2.3"></script></body></html>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script><script src="cache-reset.js"></script><script type="module" src="app.js?v=2.4"></script></body></html>

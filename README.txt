@@ -1,13 +1,18 @@
-PPS V2.3 — BĪSTAMĀ ZONA TIKAI PĀRVALDĪBĀ
+PPS V2.4 — KOMPAKTĀKS TELEFONA INTERFEISS
 
-Labojums:
-- “Dzēst visus objekta paneļus” redzams tikai cilnē Pārvaldība.
-- Tas atrodas zem Paneļu pabeigšanas un dzēšanas sadaļas.
+Uzlabots:
+- kompaktākas pārvaldības cilnes;
+- darbinieku rindas aizņem mazāk vietas;
+- mazākas un skaidrākas darbību pogas;
+- paneļu filtri telefonā sakārtoti ērti;
+- paneļu kartītes kļuvušas īsākas;
+- darbinieku piešķiršanas ķeksīši ritināmi horizontāli;
+- Bīstamā zona ir salokāma un pēc noklusējuma aizvērta.
 
 GitHub aizvieto:
 - index.html
-- app.js
 - styles.css
+- app.js
 - cache-reset.js
 - service-worker.js
 
