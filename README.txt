@@ -1,11 +1,14 @@
-PPS V4.1 — ADMINISTRATORAM REDZAMA RAŽOŠANA
+PPS V4.2 — ADMINISTRATORA RAŽOŠANAS SKATA LABOJUMS
+
+Problēma:
+- vecs CSS noteikums ar display:none!important slēpa visu Ražošanas sadaļu administratoram.
 
 Labojums:
-- administrators redz abas galvenās cilnes:
-  Ražošana un Pārvaldība;
-- administrators var brīvi pārslēgties starp abām sadaļām;
+- izņemti visi konfliktējošie administratora CSS noteikumi;
+- administrators redz abas cilnes: Ražošana un Pārvaldība;
+- nospiežot Ražošana, tiek parādīts administratora paneļu pārskats;
 - darbinieks joprojām redz tikai Ražošanu;
-- administratora rūpnīcas filtrs paliek pieejams augšā.
+- administratora kopīgais rūpnīcas filtrs darbojas arī Ražošanas skatā.
 
 GitHub aizvieto:
 - index.html

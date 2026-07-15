@@ -28,39 +28,43 @@ let selectedLoginRole=S.role||"worker";
 function applyRoleUi(){
   document.body.classList.remove("role-worker","role-admin");
 
-  const workerTab=document.querySelector('[data-main-view="productionView"]');
-  const adminTab=document.querySelector('[data-main-view="adminView"]');
+  const productionTab=document.querySelector('[data-main-view="productionView"]');
+  const managementTab=document.querySelector('[data-main-view="adminView"]');
 
   if(S.role==="worker"){
     document.body.classList.add("role-worker");
-    workerTab?.classList.add("active");
-    adminTab?.classList.remove("active");
+    productionTab?.classList.add("active");
+    managementTab?.classList.remove("active");
     $("productionView")?.classList.remove("hidden");
     $("adminView")?.classList.add("hidden");
     $("adminFactoryScopeWrap")?.classList.add("hidden");
-  }else if(S.role==="admin"){
+    return;
+  }
+
+  if(S.role==="admin"){
     document.body.classList.add("role-admin");
     $("adminFactoryScopeWrap")?.classList.remove("hidden");
 
-    // Ja neviena cilne nav aktīva, atver Ražošanu.
-    if(!workerTab?.classList.contains("active")&&!adminTab?.classList.contains("active")){
-      workerTab?.classList.add("active");
-    }
+    const managementIsActive=managementTab?.classList.contains("active");
 
-    if(adminTab?.classList.contains("active")){
-      $("adminView")?.classList.remove("hidden");
+    if(managementIsActive){
+      productionTab?.classList.remove("active");
       $("productionView")?.classList.add("hidden");
+      $("adminView")?.classList.remove("hidden");
     }else{
-      workerTab?.classList.add("active");
-      adminTab?.classList.remove("active");
+      productionTab?.classList.add("active");
+      managementTab?.classList.remove("active");
       $("productionView")?.classList.remove("hidden");
       $("adminView")?.classList.add("hidden");
     }
-  }else{
-    $("productionView")?.classList.remove("hidden");
-    $("adminView")?.classList.add("hidden");
-    $("adminFactoryScopeWrap")?.classList.add("hidden");
+    return;
   }
+
+  productionTab?.classList.add("active");
+  managementTab?.classList.remove("active");
+  $("productionView")?.classList.remove("hidden");
+  $("adminView")?.classList.add("hidden");
+  $("adminFactoryScopeWrap")?.classList.add("hidden");
 }
 
 function factoryIdForCurrentWorker(){
@@ -121,21 +125,31 @@ function mapRow(row,defaultFactoryName){
 }
 
 function setupNav(){
-  document.querySelectorAll(".main-tab").forEach(b=>b.onclick=()=>{
-    if(S.role==="worker"&&b.dataset.mainView==="adminView")return;
+  document.querySelectorAll(".main-tab").forEach(button=>{
+    button.onclick=()=>{
+      if(S.role==="worker"&&button.dataset.mainView==="adminView")return;
 
-    document.querySelectorAll(".main-tab").forEach(x=>x.classList.remove("active"));
-    document.querySelectorAll(".main-view").forEach(x=>x.classList.add("hidden"));
+      document.querySelectorAll(".main-tab").forEach(tab=>tab.classList.remove("active"));
+      document.querySelectorAll(".main-view").forEach(view=>view.classList.add("hidden"));
 
-    b.classList.add("active");
-    $(b.dataset.mainView)?.classList.remove("hidden");
+      button.classList.add("active");
+      const target=$(button.dataset.mainView);
+      target?.classList.remove("hidden");
+
+      if(button.dataset.mainView==="productionView"){
+        renderAdminProduction();
+        renderProduction();
+      }
+    };
   });
 
-  document.querySelectorAll(".admin-tab").forEach(b=>b.onclick=()=>{
-    document.querySelectorAll(".admin-tab").forEach(x=>x.classList.remove("active"));
-    document.querySelectorAll(".admin-panel").forEach(x=>x.classList.add("hidden"));
-    b.classList.add("active");
-    $(b.dataset.adminView)?.classList.remove("hidden");
+  document.querySelectorAll(".admin-tab").forEach(button=>{
+    button.onclick=()=>{
+      document.querySelectorAll(".admin-tab").forEach(tab=>tab.classList.remove("active"));
+      document.querySelectorAll(".admin-panel").forEach(panel=>panel.classList.add("hidden"));
+      button.classList.add("active");
+      $(button.dataset.adminView)?.classList.remove("hidden");
+    };
   });
 }
 
@@ -234,6 +248,7 @@ async function startSession(panelId){
 
 function renderAdminProduction(){
   if(S.role!=="admin")return;
+  $("adminProductionCard")?.classList.remove("hidden");
   const scope=currentFactoryScope();
   const panels=S.panels.filter(p=>!scope||p.factoryId===scope);
   const objects=S.objects.filter(o=>panels.some(p=>p.objectId===o.id));
