@@ -211,3 +211,26 @@ $("addFactory").onclick=async()=>{const name=$("newFactory").value.trim();if(!na
 $("previewBtn").onclick=async()=>{const f=$("excelFile").files[0];if(!f)return alert("Izvēlies Excel failu.");try{const buf=await f.arrayBuffer(),wb=XLSX.read(buf,{type:"array"}),sheet=wb.Sheets[wb.SheetNames[0]],rows=XLSX.utils.sheet_to_json(sheet,{defval:null,raw:true}),def=by(S.factories,$("defaultFactory").value)?.name||"";S.preview=rows.map(r=>mapRow(r,def)).filter(r=>r.panelName||r.designation||r.errors.length);renderPreview();$("importMsg").textContent="Fails pārbaudīts."}catch(e){$("importMsg").textContent=e.message}};
 $("importBtn").onclick=async()=>{const objectId=$("importObject").value,valid=S.preview.filter(r=>r.valid);if(!objectId||!valid.length)return;$("importBtn").disabled=true;try{const ex=await getDocs(query(collection(db,"panels"),where("objectId","==",objectId))),names=new Set(ex.docs.map(d=>String(d.data().panelName||"").toLowerCase())),rows=valid.filter(r=>!names.has(r.panelName.toLowerCase()));let n=0;for(let i=0;i<rows.length;i+=450){const batch=writeBatch(db);rows.slice(i,i+450).forEach(r=>{const f=S.factories.find(x=>x.name.toLowerCase()===r.factoryName.toLowerCase()),ref=doc(collection(db,"panels"));batch.set(ref,{...r,objectId,factoryId:f?.id||null,assignedWorkerIds:[],importedAt:serverTimestamp()})});await batch.commit();n+=Math.min(450,rows.length-i)}$("importMsg").textContent=`Pievienoti ${n}. Dublikāti: ${valid.length-rows.length}.`;S.preview=[];$("previewCard").classList.add("hidden");$("excelFile").value=""}catch(e){$("importMsg").textContent=e.message}finally{$("importBtn").disabled=false}};
 $("importObject").onchange=()=>{$("importBtn").disabled=!S.preview.some(r=>r.valid)||!$("importObject").value};setInterval(()=>{renderWorker();renderLive();renderReport()},1000);
+
+function setupAdminTabs(){
+  document.querySelectorAll(".adminTab").forEach(btn=>{
+    btn.addEventListener("click",()=>{
+      document.querySelectorAll(".adminTab").forEach(b=>b.classList.remove("active"));
+      document.querySelectorAll(".adminPanel").forEach(p=>p.classList.add("hidden"));
+      btn.classList.add("active");
+      const panel=document.getElementById(btn.dataset.adminTab);
+      if(panel)panel.classList.remove("hidden");
+    });
+  });
+}
+setupAdminTabs();
+
+const workerManageSearch=document.getElementById("workerManageSearch");
+if(workerManageSearch){
+  workerManageSearch.addEventListener("input",()=>{
+    const query=workerManageSearch.value.trim().toLowerCase();
+    document.querySelectorAll("#workerManage .manageRow").forEach(row=>{
+      row.style.display=row.textContent.toLowerCase().includes(query)?"":"none";
+    });
+  });
+}

@@ -1,28 +1,15 @@
-PPS V2
+PPS V2.1 — MODERNS UN LIETOTĀJAM DRAUDZĪGS INTERFEISS
 
-KUR DZĒST DARBINIEKU
-1. Atver cilni Pārvaldība.
-2. Atrodi sadaļu Datu pārvaldība.
-3. Zem Darbinieki atrodi vajadzīgo cilvēku.
-4. Nospied sarkano pogu DZĒST DARBINIEKU.
-
-KUR DZĒST RŪPNĪCU
-1. Atver Pārvaldība > Datu pārvaldība > Rūpnīcas.
-2. Nospied DZĒST RŪPNĪCU.
-3. Rūpnīcu var dzēst tikai tad, kad tai nav piesaistītu darbinieku un paneļu.
-
-KĀ PĀRCELT PANELI UZ CITU RŪPNĪCU
-1. Atver Pārvaldība > Paneļu piešķiršana un pārcelšana.
-2. Pie konkrētā paneļa izvēlies rūpnīcu sarakstā.
-3. Apstiprini pārcelšanu.
-4. Var arī atzīmēt vairākus paneļus ar ķeksīšiem un izmantot PĀRCELT IZVĒLĒTOS.
-
-DROŠĪBA
-- aktīvu paneli nevar dzēst vai pārcelt;
-- aktīvu darbinieku nevar dzēst vai pārcelt;
-- darbinieka vecā darba vēsture paliek pārskatos;
-- pārvietojot paneli, vecās rūpnīcas darbinieku piešķīrumi tiek noņemti;
-- paneļa dzēšana dzēš arī tā darba sesiju vēsturi.
+Galvenās izmaiņas:
+- Pārvaldība sadalīta 4 skaidrās cilnēs:
+  Darbinieki / Rūpnīcas / Paneļi / Pievienot.
+- Darbinieki attēloti kompaktās rindās.
+- Ir darbinieku meklēšana.
+- Darbinieka rūpnīcas maiņa un dzēšana ir vienā rindā.
+- Paneļu filtri un masveida pārcelšana ir vienā rīkjoslā.
+- Paneļu pabeigšana un dzēšana atrodas tajā pašā Paneļu cilnē.
+- Modernizēts viss aplikācijas dizains datoram un telefonam.
+- Darba loģika un Firestore dati nav mainīti.
 
 GITHUB
 Aizvieto:
@@ -33,6 +20,6 @@ Aizvieto:
 - service-worker.js
 
 Pēc Commit:
-- aizver visas PPS cilnes;
-- atver aplikāciju no jauna;
-- nospied Ctrl+Shift+R.
+1. Aizver visas PPS cilnes.
+2. Atver aplikāciju no jauna.
+3. Nospied Ctrl+Shift+R.
