@@ -13,7 +13,7 @@ const firebaseConfig={
   appId:"1:431301329254:web:bd3940bfff0c41d4e508a7"
 };
 const app=initializeApp(firebaseConfig),db=getFirestore(app),$=id=>document.getElementById(id);
-const ADMIN_PIN="2580"; // Nomaini šo vērtību, ja vajag citu administratora PIN
+const ADMIN_PIN="1020"; // Nomaini šo vērtību, ja vajag citu administratora PIN
 const S={factories:[],workers:[],objects:[],panels:[],sessions:[],preview:[],workerId:localStorage.getItem("pps_worker_id")||null,role:localStorage.getItem("pps_role")||null,adminName:localStorage.getItem("pps_admin_name")||"",adminFactoryScope:localStorage.getItem("pps_admin_factory_scope")||""};
 
 const by=(list,id)=>list.find(x=>x.id===id);
