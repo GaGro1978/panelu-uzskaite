@@ -824,3 +824,37 @@ body.role-admin [data-main-view="adminView"]{
     font-size:16px;
   }
 }
+
+/* PPS V4.4 — administratora paneļa pabeigšana */
+.admin-production-row{
+  grid-template-columns:minmax(0,1fr) auto auto;
+}
+.admin-finish-panel{
+  border:0;
+  border-radius:9px;
+  padding:9px 11px;
+  background:#15803d;
+  color:#fff;
+  font-size:11px;
+  font-weight:900;
+  cursor:pointer;
+  white-space:nowrap;
+}
+.admin-finish-panel:hover{
+  background:#166534;
+}
+.admin-finish-panel:disabled{
+  opacity:.45;
+  cursor:not-allowed;
+}
+@media(max-width:620px){
+  .admin-production-row{
+    grid-template-columns:minmax(0,1fr) auto;
+  }
+  .admin-finish-panel{
+    grid-column:1 / -1;
+    width:100%;
+    padding:10px;
+    font-size:12px;
+  }
+}

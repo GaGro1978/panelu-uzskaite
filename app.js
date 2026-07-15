@@ -246,6 +246,56 @@ async function startSession(panelId){
 }
 
 
+
+async function adminFinishPanel(panelId){
+  if(S.role!=="admin"){
+    alert("Šī darbība pieejama tikai administratoram.");
+    return;
+  }
+
+  const panel=by(S.panels,panelId);
+  if(!panel)return;
+
+  const activeSessions=activeForPanel(panelId);
+  const activeNames=[...new Set(activeSessions.map(s=>s.workerName))];
+
+  let question=`Vai panelis ${panel.panelName} tiešām ir pilnībā pabeigts?`;
+  if(activeNames.length){
+    question+=`\n\nPie paneļa vēl aktīvi strādā:\n${activeNames.map(n=>"• "+n).join("\n")}\n\nApstiprinot, viņu aktīvās sesijas tiks pabeigtas.`;
+  }
+
+  if(!confirm(question))return;
+
+  try{
+    for(let i=0;i<activeSessions.length;i+=450){
+      const batch=writeBatch(db);
+
+      activeSessions.slice(i,i+450).forEach(session=>{
+        batch.update(doc(db,"sessions",session.id),{
+          status:"Pabeigts",
+          accumulatedSeconds:elapsed(session),
+          lastResumeAt:null,
+          endAt:serverTimestamp(),
+          endedByAdmin:true
+        });
+      });
+
+      await batch.commit();
+    }
+
+    await updateDoc(doc(db,"panels",panelId),{
+      status:"Pabeigts",
+      completedAt:serverTimestamp(),
+      completedByWorkerId:null,
+      completedByWorkerName:S.adminName||"Administrators",
+      completedByAdmin:true
+    });
+  }catch(error){
+    console.error(error);
+    alert("Neizdevās pabeigt paneli: "+error.message);
+  }
+}
+
 function renderAdminProduction(){
   if(S.role!=="admin")return;
   $("adminProductionCard")?.classList.remove("hidden");
@@ -280,6 +330,15 @@ function renderAdminProduction(){
       if(status==="Pabeigts")badge.classList.add("done");
       badge.textContent=status;
       row.append(left,badge);
+
+      if(p.status!=="Pabeigts"){
+        const finishButton=document.createElement("button");
+        finishButton.className="admin-finish-panel";
+        finishButton.textContent="PANELIS PABEIGTS";
+        finishButton.onclick=()=>adminFinishPanel(p.id);
+        row.appendChild(finishButton);
+      }
+
       box.appendChild(row);
     });
 
@@ -543,10 +602,75 @@ function renderDanger(){
   btn.disabled=!panels.length||active.length||$("deleteObjectConfirm").value.trim()!==o.name;
 }
 
-function exportCsv(){
-  const rows=filteredSessions(),header=["Rūpnīca","Objekts","Panelis","Darbinieks","Sesijas statuss","Paneļa statuss","Sākums","Beigas","Laiks"];
-  const data=rows.map(s=>[by(S.factories,s.factoryId)?.name||"",by(S.objects,s.objectId)?.name||"",s.panelName,s.workerName,s.status,by(S.panels,s.panelId)?.status||"",fmt(s.startAt),fmt(s.endAt),hms(elapsed(s))]);
-  const csv=[header,...data].map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(";")).join("\n"),blob=new Blob(["\uFEFF"+csv],{type:"text/csv;charset=utf-8"}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download=`PPS_${new Date().toISOString().slice(0,10)}.csv`;a.click();URL.revokeObjectURL(url);
+function exportExcel(){
+  if(typeof XLSX==="undefined"){
+    alert("Excel bibliotēka nav ielādējusies. Pārlādē lapu un mēģini vēlreiz.");
+    return;
+  }
+
+  const sessions=filteredSessions()
+    .sort((a,b)=>(toDate(a.startAt)?.getTime()||0)-(toDate(b.startAt)?.getTime()||0));
+
+  const sessionRows=[
+    ["Rūpnīca","Objekts","Panelis","Darbinieks","Sesijas statuss","Paneļa statuss","Sākums","Beigas","Darba laiks"]
+  ];
+
+  sessions.forEach(session=>{
+    sessionRows.push([
+      by(S.factories,session.factoryId)?.name||"",
+      by(S.objects,session.objectId)?.name||"",
+      session.panelName||"",
+      session.workerName||"",
+      session.status||"",
+      by(S.panels,session.panelId)?.status||"",
+      fmt(session.startAt),
+      fmt(session.endAt),
+      hms(elapsed(session))
+    ]);
+  });
+
+  const scopeFactory=$("overviewFactory")?.value||"";
+  const scopeObject=$("overviewObject")?.value||"";
+  const panelRows=[
+    ["Rūpnīca","Objekts","Panelis","Statuss","Pabeidza","Pabeigšanas laiks"]
+  ];
+
+  S.panels
+    .filter(panel=>(!scopeFactory||panel.factoryId===scopeFactory)&&(!scopeObject||panel.objectId===scopeObject))
+    .sort(naturalPanelSort)
+    .forEach(panel=>{
+      panelRows.push([
+        by(S.factories,panel.factoryId)?.name||"",
+        by(S.objects,panel.objectId)?.name||"",
+        panel.panelName||"",
+        panel.status||"",
+        panel.completedByWorkerName||"",
+        fmt(panel.completedAt)
+      ]);
+    });
+
+  const workbook=XLSX.utils.book_new();
+  const sessionsSheet=XLSX.utils.aoa_to_sheet(sessionRows);
+  const panelsSheet=XLSX.utils.aoa_to_sheet(panelRows);
+
+  sessionsSheet["!cols"]=[
+    {wch:16},{wch:18},{wch:16},{wch:18},{wch:17},
+    {wch:16},{wch:20},{wch:20},{wch:14}
+  ];
+  panelsSheet["!cols"]=[
+    {wch:16},{wch:18},{wch:16},{wch:14},{wch:20},{wch:20}
+  ];
+
+  sessionsSheet["!autofilter"]={ref:`A1:I${Math.max(1,sessionRows.length)}`};
+  panelsSheet["!autofilter"]={ref:`A1:F${Math.max(1,panelRows.length)}`};
+
+  XLSX.utils.book_append_sheet(workbook,sessionsSheet,"Darba sesijas");
+  XLSX.utils.book_append_sheet(workbook,panelsSheet,"Paneļi");
+
+  XLSX.writeFile(
+    workbook,
+    `PPS_parskats_${new Date().toISOString().slice(0,10)}.xlsx`
+  );
 }
 
 function renderAll(){renderIdentity();renderProduction();renderAdminProduction();renderLive();renderReport();renderPanels();renderWorkers();renderFactories();renderImport();renderDanger()}
@@ -668,7 +792,7 @@ $("adminFactoryScope").onchange=()=>{
 };
 $("adminProductionObject").onchange=renderAdminProduction;
 $("adminProductionSearch").oninput=renderAdminProduction;
-["liveFactory","liveObject"].forEach(id=>$(id).onchange=renderLive);["datePreset","overviewFactory","overviewObject","overviewWorker"].forEach(id=>$(id).onchange=renderReport);$("overviewSearch").oninput=renderReport;$("exportCsvBtn").onclick=exportCsv;
+["liveFactory","liveObject"].forEach(id=>$(id).onchange=renderLive);["datePreset","overviewFactory","overviewObject","overviewWorker"].forEach(id=>$(id).onchange=renderReport);$("overviewSearch").oninput=renderReport;$("exportCsvBtn").onclick=exportExcel;
 ["assignFactory","assignObject"].forEach(id=>$(id).onchange=renderPanels);$("assignSearch").oninput=renderPanels;$("workerManageSearch").oninput=renderWorkers;
 $("addFactory").onclick=async()=>{const n=$("newFactory").value.trim();if(n){await addDoc(collection(db,"factories"),{name:n,createdAt:serverTimestamp()});$("newFactory").value=""}};
 $("addWorker").onclick=async()=>{const n=$("newWorker").value.trim(),f=$("newWorkerFactory").value;if(n&&f){await addDoc(collection(db,"workers"),{name:n,factoryId:f,active:true,createdAt:serverTimestamp()});$("newWorker").value=""}};

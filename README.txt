@@ -1,20 +1,22 @@
-PPS V4.3 — PANELIS PABEIGTS
+PPS V4.4
 
-Darbinieka aktīvajā skatā tagad ir 3 pogas:
-- PAUZE
-- PABEIGT SAVU DARBU
-- PANELIS PABEIGTS
+JAUNUMI
 
-PANELIS PABEIGTS:
-- pārbauda, vai pie paneļa vēl nestrādā cits darbinieks;
-- ja strādā, paneli pabeigt neļauj un parāda vārdus;
-- ja nestrādā, prasa vienu apstiprinājumu;
-- pabeidz darbinieka sesiju;
-- uzliek panelim statusu Pabeigts;
-- saglabā, kurš darbinieks paneli pabeidza;
-- panelis pazūd no darbinieka aktīvā saraksta.
+1. Administrators var pabeigt paneli
+- Atver Ražošanu administratora režīmā.
+- Pie nepabeigta paneļa nospied PANELIS PABEIGTS.
+- Ja pie paneļa vēl ir aktīvi darbinieki, sistēma parāda viņu vārdus.
+- Pēc administratora apstiprinājuma aktīvās sesijas tiek pabeigtas un panelis iegūst statusu Pabeigts.
 
-GitHub aizvieto:
+2. Eksports uz Excel
+- Pārskatā poga tagad ir EKSPORTĒT EXCEL.
+- Tiek izveidots īsts .xlsx fails.
+- Excel failā ir divas lapas:
+  Darba sesijas
+  Paneļi
+- Abām lapām ir filtri un sakārtoti kolonnu platumi.
+
+GITHUB AIZVIETO
 - index.html
 - styles.css
 - app.js
