@@ -1,14 +1,12 @@
-PPS V3.3 — KOMPAKTA PANEĻU TABULA
+PPS V3.4 — ŠAURĀKS PĀRVALDĪBAS SKATS
 
 Izmaiņas:
-- Objekts, statuss un paneļa numurs apvienoti vienā kolonnā.
-- Darbinieku kolonnas samazinātas līdz 56 px.
-- Darbinieka šūnā ir tikai cilvēka ikona.
-- Pilnais darbinieka vārds redzams kolonnas galvenē un uzvedot peli.
-- Rūpnīcas kolonna samazināta līdz 112 px.
-- Dzēšanas kolonna samazināta līdz 48 px.
-- Dzēšanas poga aizstāta ar kompaktu × pogu.
-- Telefonā tabula paliek horizontāli ritināma.
+- viss galvenais darba laukums sašaurināts līdz 920 px;
+- Pārvaldības kartīte sašaurināta līdz 890 px;
+- paneļu filtri ir kompaktākā 2 kolonnu blokā;
+- tabulas atstarpes un darbinieku pogas vēl nedaudz sašaurinātas;
+- izkārtojums paredzēts maksimums aptuveni 6 darbiniekiem;
+- mazāk tukšas vietas pa kreisi un pa labi.
 
 GitHub aizvieto:
 - index.html

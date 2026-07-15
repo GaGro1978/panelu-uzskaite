@@ -383,3 +383,92 @@ th{background:#f8fafc;color:#687387;font-size:10px;text-transform:uppercase;lett
     font-size:16px!important;
   }
 }
+
+/* PPS V3.4 — šaurāks darba laukums līdz 6 darbiniekiem */
+.main-nav,
+main{
+  max-width:920px;
+}
+
+.admin-shell{
+  max-width:890px;
+  margin-left:auto;
+  margin-right:auto;
+}
+
+.admin-header{
+  padding:16px 16px 6px;
+}
+
+.admin-nav{
+  padding-left:10px;
+  padding-right:10px;
+}
+
+.admin-panel{
+  padding:14px 16px 18px;
+}
+
+#panelsPanel .panel-header{
+  align-items:end;
+}
+
+#panelsPanel .inline-filters{
+  width:430px;
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:6px;
+}
+
+#panelsPanel .inline-filters input{
+  grid-column:1 / -1;
+}
+
+#panelsPanel .inline-filters select,
+#panelsPanel .inline-filters input{
+  min-width:0;
+  padding:8px 9px;
+  font-size:12px;
+}
+
+/* Maksimums 6 darbiniekiem — vēl kompaktākas tabulas kolonnas */
+.panel-table-header,
+.panel-table-row{
+  min-width:100%;
+}
+
+.panel-th{
+  padding-left:4px;
+  padding-right:4px;
+}
+
+.panel-td{
+  padding-left:3px;
+  padding-right:3px;
+}
+
+.worker-mini-chip{
+  width:27px;
+  height:25px;
+}
+
+.factory-table-select{
+  padding-left:4px;
+  padding-right:4px;
+}
+
+@media(max-width:940px){
+  .main-nav,
+  main{
+    max-width:100%;
+  }
+  .admin-shell{
+    max-width:100%;
+  }
+}
+
+@media(max-width:620px){
+  #panelsPanel .inline-filters{
+    width:100%;
+  }
+}
