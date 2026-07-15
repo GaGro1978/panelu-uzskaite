@@ -1,14 +1,18 @@
-PPS V4.2 — ADMINISTRATORA RAŽOŠANAS SKATA LABOJUMS
+PPS V4.3 — PANELIS PABEIGTS
 
-Problēma:
-- vecs CSS noteikums ar display:none!important slēpa visu Ražošanas sadaļu administratoram.
+Darbinieka aktīvajā skatā tagad ir 3 pogas:
+- PAUZE
+- PABEIGT SAVU DARBU
+- PANELIS PABEIGTS
 
-Labojums:
-- izņemti visi konfliktējošie administratora CSS noteikumi;
-- administrators redz abas cilnes: Ražošana un Pārvaldība;
-- nospiežot Ražošana, tiek parādīts administratora paneļu pārskats;
-- darbinieks joprojām redz tikai Ražošanu;
-- administratora kopīgais rūpnīcas filtrs darbojas arī Ražošanas skatā.
+PANELIS PABEIGTS:
+- pārbauda, vai pie paneļa vēl nestrādā cits darbinieks;
+- ja strādā, paneli pabeigt neļauj un parāda vārdus;
+- ja nestrādā, prasa vienu apstiprinājumu;
+- pabeidz darbinieka sesiju;
+- uzliek panelim statusu Pabeigts;
+- saglabā, kurš darbinieks paneli pabeidza;
+- panelis pazūd no darbinieka aktīvā saraksta.
 
 GitHub aizvieto:
 - index.html

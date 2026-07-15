@@ -272,7 +272,7 @@ function renderAdminProduction(){
       const row=document.createElement("div");
       row.className="admin-production-row";
       const left=document.createElement("div");
-      left.innerHTML=`<strong>${p.panelName}</strong><small>${by(S.objects,p.objectId)?.name||"—"} · ${by(S.factories,p.factoryId)?.name||"—"}${sessions.length?` · ${sessions.map(s=>s.workerName).join(", ")}`:""}</small>`;
+      left.innerHTML=`<strong>${p.panelName}</strong><small>${by(S.objects,p.objectId)?.name||"—"} · ${by(S.factories,p.factoryId)?.name||"—"}${sessions.length?` · ${sessions.map(s=>s.workerName).join(", ")}`:""}${p.completedByWorkerName?` · pabeidza: ${p.completedByWorkerName}`:""}</small>`;
       const badge=document.createElement("span");
       badge.className="admin-production-status";
       if(status==="Procesā")badge.classList.add("running");
@@ -606,6 +606,61 @@ $("changeRoleBtn").onclick=clearCurrentIdentity;
 $("workerObject").onchange=renderProduction;$("workerPanelSearch").oninput=renderProduction;
 $("workerPauseBtn").onclick=async()=>{const s=activeForWorker(S.workerId);if(!s)return;if(s.status==="Procesā"){await updateDoc(doc(db,"sessions",s.id),{status:"Pauzē",accumulatedSeconds:elapsed(s),lastResumeAt:null})}else await updateDoc(doc(db,"sessions",s.id),{status:"Procesā",lastResumeAt:serverTimestamp()})};
 $("workerFinishBtn").onclick=async()=>{const s=activeForWorker(S.workerId);if(!s||!confirm(`Pabeigt savu darbu pie ${s.panelName}?`))return;await updateDoc(doc(db,"sessions",s.id),{status:"Pabeigts",accumulatedSeconds:elapsed(s),lastResumeAt:null,endAt:serverTimestamp()})};
+
+$("workerFinishPanelBtn").onclick=async()=>{
+  const worker=currentWorker();
+  const session=activeForWorker(S.workerId);
+
+  if(!worker||!session)return;
+
+  const otherActive=activeForPanel(session.panelId)
+    .filter(s=>s.workerId!==worker.id);
+
+  if(otherActive.length){
+    alert(
+      "Paneli nevar pabeigt.\n\nPie tā vēl strādā:\n" +
+      otherActive.map(s=>"• "+s.workerName).join("\n")
+    );
+    return;
+  }
+
+  if(!confirm(`Vai panelis ${session.panelName} tiešām ir pilnībā pabeigts?`)){
+    return;
+  }
+
+  try{
+    const finalSeconds=elapsed(session);
+
+    await runTransaction(db,async tx=>{
+      const sessionRef=doc(db,"sessions",session.id);
+      const panelRef=doc(db,"panels",session.panelId);
+
+      tx.update(sessionRef,{
+        status:"Pabeigts",
+        accumulatedSeconds:finalSeconds,
+        lastResumeAt:null,
+        endAt:serverTimestamp()
+      });
+
+      tx.update(panelRef,{
+        status:"Pabeigts",
+        completedAt:serverTimestamp(),
+        completedByWorkerId:worker.id,
+        completedByWorkerName:worker.name
+      });
+    });
+
+    const message=$("workerActionMessage");
+    if(message){
+      message.textContent="✓ PANELIS PABEIGTS";
+      message.classList.remove("hidden");
+      setTimeout(()=>message.classList.add("hidden"),2200);
+    }
+  }catch(error){
+    console.error(error);
+    alert("Neizdevās pabeigt paneli: "+error.message);
+  }
+};
 $("adminFactoryScope").onchange=()=>{
   S.adminFactoryScope=$("adminFactoryScope").value;
   localStorage.setItem("pps_admin_factory_scope",S.adminFactoryScope);
