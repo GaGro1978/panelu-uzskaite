@@ -169,6 +169,7 @@ function renderPanels(){
   const q=$("assignSearch").value.trim().toLowerCase();
   const box=$("assignList");
   const header=$("panelTableHeader");
+
   box.innerHTML="";
   header.innerHTML="";
 
@@ -180,26 +181,31 @@ function renderPanels(){
   const visibleWorkers=S.workers.filter(w=>!ff || w.factoryId===ff || visibleFactoryIds.includes(w.factoryId));
 
   const columns=[
-    "minmax(150px,1.15fr)",
-    "minmax(105px,.8fr)",
-    ...visibleWorkers.map(()=> "minmax(90px,.65fr)"),
-    "minmax(145px,1fr)",
-    "74px"
+    "minmax(155px,1.35fr)",
+    ...visibleWorkers.map(()=> "56px"),
+    "112px",
+    "48px"
   ];
   const template=columns.join(" ");
 
   header.style.gridTemplateColumns=template;
+
   const headers=[
-    "Objekts / statuss",
-    "Paneļa Nr.",
+    "Panelis",
     ...visibleWorkers.map(w=>w.name),
     "Rūpnīca",
-    "Darbība"
+    ""
   ];
-  headers.forEach(text=>{
+
+  headers.forEach((text,index)=>{
     const cell=document.createElement("div");
     cell.className="panel-th";
-    cell.textContent=text;
+    if(index>0 && index<=visibleWorkers.length){
+      cell.title=text;
+      cell.textContent=text.length>6?text.slice(0,5)+".":text;
+    }else{
+      cell.textContent=text;
+    }
     header.appendChild(cell);
   });
 
@@ -210,15 +216,13 @@ function renderPanels(){
 
     const st=statusLabel(p);
 
-    const meta=document.createElement("div");
-    meta.className="panel-td panel-meta";
-    meta.innerHTML=`<strong>${by(S.objects,p.objectId)?.name||"—"}</strong><span>${st.text}</span>`;
-
-    const panelNo=document.createElement("div");
-    panelNo.className="panel-td panel-number";
-    panelNo.textContent=p.panelName;
-
-    row.append(meta,panelNo);
+    const panelCell=document.createElement("div");
+    panelCell.className="panel-td panel-combined";
+    panelCell.innerHTML=`
+      <span class="panel-top">${by(S.objects,p.objectId)?.name||"—"} • ${st.text}</span>
+      <strong>${p.panelName}</strong>
+    `;
+    row.appendChild(panelCell);
 
     visibleWorkers.forEach(w=>{
       const cell=document.createElement("div");
@@ -228,23 +232,34 @@ function renderPanels(){
         cell.innerHTML='<span class="not-applicable">—</span>';
       }else{
         const chip=document.createElement("button");
-        chip.className=`worker-table-chip ${(p.assignedWorkerIds||[]).includes(w.id)?"active":""}`;
-        chip.textContent=`👷 ${w.name}`;
-        chip.title=(p.assignedWorkerIds||[]).includes(w.id)?"Noņemt piešķīrumu":"Piešķirt darbinieku";
+        chip.className=`worker-mini-chip ${(p.assignedWorkerIds||[]).includes(w.id)?"active":""}`;
+        chip.textContent="👷";
+        chip.title=w.name;
+        chip.setAttribute("aria-label",w.name);
+
         chip.onclick=async()=>{
           const cur=[...(p.assignedWorkerIds||[])];
-          const next=cur.includes(w.id)?cur.filter(id=>id!==w.id):[...cur,w.id];
-          await updateDoc(doc(db,"panels",p.id),{assignedWorkerIds:next});
+          const next=cur.includes(w.id)
+            ?cur.filter(id=>id!==w.id)
+            :[...cur,w.id];
+
+          await updateDoc(doc(db,"panels",p.id),{
+            assignedWorkerIds:next
+          });
         };
+
         cell.appendChild(chip);
       }
+
       row.appendChild(cell);
     });
 
     const factoryCell=document.createElement("div");
-    factoryCell.className="panel-td";
+    factoryCell.className="panel-td factory-cell";
+
     const fs=document.createElement("select");
     fs.className="factory-table-select";
+
     S.factories.forEach(f=>{
       const o=document.createElement("option");
       o.value=f.id;
@@ -252,35 +267,47 @@ function renderPanels(){
       o.selected=f.id===p.factoryId;
       fs.appendChild(o);
     });
+
     fs.onchange=async()=>{
-      const old=p.factoryId,newId=fs.value;
+      const old=p.factoryId;
+      const newId=fs.value;
+
       if(activeForPanel(p.id).length){
         alert("Aktīvu paneli nevar pārcelt.");
         fs.value=old;
         return;
       }
+
       const f=by(S.factories,newId);
+
       if(!confirm(`Pārcelt ${p.panelName} uz ${f.name}?`)){
         fs.value=old;
         return;
       }
+
       await updateDoc(doc(db,"panels",p.id),{
         factoryId:newId,
         factoryName:f.name,
         assignedWorkerIds:[]
       });
     };
+
     factoryCell.appendChild(fs);
+    row.appendChild(factoryCell);
 
     const actionCell=document.createElement("div");
     actionCell.className="panel-td action-cell";
-    const del=document.createElement("button");
-    del.className="panel-delete";
-    del.textContent="Dzēst";
-    del.onclick=()=>deletePanel(p.id);
-    actionCell.appendChild(del);
 
-    row.append(factoryCell,actionCell);
+    const del=document.createElement("button");
+    del.className="panel-delete icon-delete";
+    del.textContent="×";
+    del.title="Dzēst paneli";
+    del.setAttribute("aria-label","Dzēst paneli");
+    del.onclick=()=>deletePanel(p.id);
+
+    actionCell.appendChild(del);
+    row.appendChild(actionCell);
+
     box.appendChild(row);
   });
 
