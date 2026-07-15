@@ -940,3 +940,37 @@ body.role-admin [data-main-view="adminView"]{
   font-size:13px;
   font-weight:800;
 }
+
+/* PPS V4.7 — vienots lietotāju pieteikšanās skats */
+.login-user-info{
+  margin-top:9px;
+  min-height:40px;
+  padding:10px 11px;
+  border:1px solid var(--line);
+  border-radius:10px;
+  background:#f8fafc;
+  color:var(--muted);
+  font-size:13px;
+}
+#loginPin{
+  text-align:center;
+  letter-spacing:.35em;
+  font-size:22px;
+  font-weight:900;
+}
+
+body.role-manager .main-nav{
+  grid-template-columns:1fr 1fr;
+}
+body.role-manager [data-main-view="productionView"],
+body.role-manager [data-main-view="adminView"]{
+  display:block!important;
+}
+body.role-manager #importPanel,
+body.role-manager #factoriesPanel{
+  display:none!important;
+}
+body.role-manager .admin-nav [data-admin-view="importPanel"],
+body.role-manager .admin-nav [data-admin-view="factoriesPanel"]{
+  display:none!important;
+}

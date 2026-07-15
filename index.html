@@ -4,14 +4,14 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#111827">
-  <title>PPS V4.6</title>
+  <title>PPS V4.7</title>
   <link rel="manifest" href="manifest.json">
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
 <header class="app-header">
   <div>
-    <h1>PPS V4.6</h1>
+    <h1>PPS V4.7</h1>
     <p>Paneļu ražošanas uzskaite</p>
   </div>
   <div class="header-tools">
@@ -38,42 +38,20 @@
   <div class="section-title">
     <div>
       <span class="eyebrow">PIEKĻUVE</span>
-      <h2>Izvēlies režīmu</h2>
-      <p>Izvēle saglabāsies šajā ierīcē.</p>
+      <h2>Izvēlies lietotāju</h2>
+      <p>Sistēma pati noteiks tavu lomu un rūpnīcu.</p>
     </div>
   </div>
 
-  <div class="role-switch">
-    <button id="chooseWorkerRole" class="role-card active" type="button">
-      <strong>Darbinieks</strong>
-      <span>Ražošana savā rūpnīcā</span>
-    </button>
-    <button id="chooseAdminRole" class="role-card" type="button">
-      <strong>Administrators</strong>
-      <span>Pārvaldība visām rūpnīcām</span>
-    </button>
-  </div>
+  <label>Lietotājs</label>
+  <select id="loginUserSelect"></select>
 
-  <div id="workerLoginFields">
-    <div class="form-grid two">
-      <div>
-        <label>Rūpnīca</label>
-        <select id="identityFactory"></select>
-      </div>
-      <div>
-        <label>Darbinieks</label>
-        <select id="identityWorker"></select>
-      </div>
-    </div>
-  </div>
+  <div id="loginUserInfo" class="login-user-info"></div>
 
-  <div id="adminLoginFields" class="hidden">
-    <label>Administratora vārds</label>
-    <input id="adminDisplayName" placeholder="Piemēram, Ražošanas vadītājs">
-
-    <label>Administratora PIN</label>
+  <div id="loginPinWrap" class="hidden">
+    <label>PIN</label>
     <input
-      id="adminPin"
+      id="loginPin"
       type="password"
       inputmode="numeric"
       maxlength="4"
@@ -81,10 +59,10 @@
       autocomplete="off"
       placeholder="••••"
     >
-    <div id="adminPinMessage" class="pin-message hidden"></div>
+    <div id="loginPinMessage" class="pin-message hidden"></div>
   </div>
 
-  <button id="saveIdentityBtn" class="btn primary full">SAGLABĀT</button>
+  <button id="saveIdentityBtn" class="btn primary full">IEIET</button>
 </article>
 
     
@@ -344,6 +322,6 @@
 
 <script src="cache-reset.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script type="module" src="app.js?v=4.6"></script>
+<script type="module" src="app.js?v=4.7"></script>
 </body>
 </html>

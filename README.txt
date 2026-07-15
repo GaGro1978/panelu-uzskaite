@@ -1,21 +1,38 @@
-PPS V4.6 — ADMINISTRATORA PIN
+PPS V4.7 — LIETOTĀJI, VADĪTĀJI UN OFISS
 
-Administratora PIN pēc noklusējuma:
-2580
+PIN:
+- Ražotņu vadītājiem: 1100
+- Ofisa darbiniekiem: 1020
+- Parastajiem darbiniekiem PIN nav vajadzīgs.
 
-Darbība:
-- darbinieka režīmam PIN nav vajadzīgs;
-- izvēloties Administrators, jāievada 4 ciparu PIN;
-- nepareiza PIN gadījumā administratora režīms netiek atvērts;
-- pēc veiksmīgas pieteikšanās administrators paliek ielogots šajā ierīcē;
-- lai izietu, nospied Mainīt lietotāju.
+Ražotņu vadītāji:
+- Dzintars — Ventspils
+- Raivis — Jēkabpils
+- Jānis — Balvi
+- Ilmārs — Ogre
 
-KĀ NOMAINĪT PIN
-Atver app.js un pašā sākumā atrodi:
+Ofisa darbinieki:
+- Gatis
+- Ansis
+- Valters
+- Eduards
+- Hans
 
-const ADMIN_PIN="2580";
+Piekļuve:
+Darbinieks:
+- redz tikai Ražošanu savā rūpnīcā.
 
-Nomaini 2580 uz savu 4 ciparu PIN.
+Ražotnes vadītājs:
+- redz Ražošanu un Pārvaldību tikai savai rūpnīcai;
+- var piešķirt darbiniekus;
+- var pabeigt paneļus;
+- nevar pārcelt paneļus uz citu rūpnīcu;
+- nevar dzēst paneļus, darbiniekus vai rūpnīcas;
+- neredz Importu un Rūpnīcu pārvaldību.
+
+Ofisa darbinieks:
+- redz visas rūpnīcas;
+- var importēt, pārcelt, dzēst un pilnībā pārvaldīt sistēmu.
 
 GitHub aizvieto:
 - index.html
