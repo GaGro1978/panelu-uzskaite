@@ -472,3 +472,150 @@ main{
     width:100%;
   }
 }
+
+/* PPS V3.5 — fonti +20%, natural sort un krāsaini statusi */
+body{
+  font-size:19px;
+}
+
+.app-header h1{
+  font-size:26px;
+}
+.app-header p{
+  font-size:14px;
+}
+.badge{
+  font-size:13px;
+}
+.main-tab{
+  font-size:16px;
+}
+.admin-tab{
+  font-size:14px;
+}
+.eyebrow{
+  font-size:12px;
+}
+h2{
+  font-size:30px;
+}
+h3{
+  font-size:24px;
+}
+h4{
+  font-size:19px;
+}
+p,
+.message{
+  font-size:15px;
+}
+label{
+  font-size:14px;
+}
+input,
+select{
+  font-size:16px;
+}
+.btn{
+  font-size:15px;
+}
+.panel-th{
+  font-size:11px;
+}
+.panel-combined .panel-top{
+  font-size:11px;
+  font-weight:800;
+}
+.panel-combined strong{
+  font-size:17px;
+}
+.worker-mini-chip{
+  width:32px;
+  height:30px;
+  font-size:14px;
+}
+.factory-table-select{
+  font-size:12px;
+}
+.icon-delete{
+  width:30px!important;
+  height:30px!important;
+  font-size:19px!important;
+}
+.production-row strong{
+  font-size:21px;
+}
+.production-row small{
+  font-size:13px;
+}
+.production-row .btn{
+  font-size:15px;
+}
+.manage-row strong{
+  font-size:17px;
+}
+.manage-row small{
+  font-size:13px;
+}
+.summary-grid span{
+  font-size:13px;
+}
+.summary-grid strong{
+  font-size:27px;
+}
+th,
+td{
+  font-size:14px;
+}
+
+/* Statusu krāsas */
+.panel-top.status-free{
+  color:#15803d;
+}
+.panel-top.status-running{
+  color:#b45309;
+}
+.panel-top.status-done{
+  color:#1d4ed8;
+}
+
+@media(max-width:620px){
+  .app-header h1{
+    font-size:24px;
+  }
+  .main-tab{
+    font-size:15px;
+  }
+  .admin-tab{
+    font-size:13px;
+  }
+  h2{
+    font-size:27px;
+  }
+  h3{
+    font-size:21px;
+  }
+  .panel-th{
+    font-size:10px;
+  }
+  .panel-combined .panel-top{
+    font-size:10px;
+  }
+  .panel-combined strong{
+    font-size:16px;
+  }
+  .worker-mini-chip{
+    width:30px;
+    height:28px;
+    font-size:13px;
+  }
+  .factory-table-select{
+    font-size:11px;
+  }
+  .production-row strong{
+    font-size:19px;
+  }
+  .production-row small{
+    font-size:12px;
+  }
+}

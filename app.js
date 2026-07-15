@@ -23,6 +23,11 @@ const elapsed=s=>{let t=s?.accumulatedSeconds||0;if(s?.status==="Procesā"&&s.la
 const currentWorker=()=>by(S.workers,S.workerId);
 const activeForWorker=id=>S.sessions.find(s=>s.workerId===id&&(s.status==="Procesā"||s.status==="Pauzē"));
 const activeForPanel=id=>S.sessions.filter(s=>s.panelId===id&&(s.status==="Procesā"||s.status==="Pauzē"));
+const naturalPanelSort=(a,b)=>String(a.panelName||"").localeCompare(
+  String(b.panelName||""),
+  "lv",
+  {numeric:true,sensitivity:"base"}
+);
 
 function fill(el,items,all=null){
   if(!el)return;
@@ -96,7 +101,7 @@ function renderProduction(){
     if(objectId&&p.objectId!==objectId)return false;
     if(q&&!String(p.panelName).toLowerCase().includes(q))return false;
     const a=p.assignedWorkerIds||[];return a.length===0||a.includes(w.id);
-  });
+  }).sort(naturalPanelSort);
   panels.forEach(p=>{
     const activeSessions=activeForPanel(p.id),row=document.createElement("div");row.className="production-row";
     const left=document.createElement("div");
@@ -175,6 +180,7 @@ function renderPanels(){
 
   const filteredPanels=S.panels
     .filter(p=>(!ff||p.factoryId===ff)&&(!fo||p.objectId===fo)&&(!q||String(p.panelName).toLowerCase().includes(q)))
+    .sort(naturalPanelSort)
     .slice(0,500);
 
   const visibleFactoryIds=[...new Set(filteredPanels.map(p=>p.factoryId).filter(Boolean))];
@@ -219,7 +225,7 @@ function renderPanels(){
     const panelCell=document.createElement("div");
     panelCell.className="panel-td panel-combined";
     panelCell.innerHTML=`
-      <span class="panel-top">${by(S.objects,p.objectId)?.name||"—"} • ${st.text}</span>
+      <span class="panel-top status-${st.cls||"free"}">${by(S.objects,p.objectId)?.name||"—"} • ${st.text}</span>
       <strong>${p.panelName}</strong>
     `;
     row.appendChild(panelCell);

@@ -1,12 +1,15 @@
-PPS V3.4 — ŠAURĀKS PĀRVALDĪBAS SKATS
+PPS V3.5
 
 Izmaiņas:
-- viss galvenais darba laukums sašaurināts līdz 920 px;
-- Pārvaldības kartīte sašaurināta līdz 890 px;
-- paneļu filtri ir kompaktākā 2 kolonnu blokā;
-- tabulas atstarpes un darbinieku pogas vēl nedaudz sašaurinātas;
-- izkārtojums paredzēts maksimums aptuveni 6 darbiniekiem;
-- mazāk tukšas vietas pa kreisi un pa labi.
+- galvenie fonti palielināti aptuveni par 20%;
+- paneļi Ražošanā un Pārvaldībā tiek kārtoti pēc nosaukuma;
+- tiek izmantota dabiskā ciparu secība:
+  1R-E2, 1R-E3, 1R-E10;
+- statusi ir iekrāsoti:
+  zaļš — Brīvs,
+  oranžs — Procesā,
+  zils — Pabeigts;
+- saglabāts kompaktais izkārtojums līdz aptuveni 6 darbiniekiem.
 
 GitHub aizvieto:
 - index.html
@@ -14,3 +17,5 @@ GitHub aizvieto:
 - app.js
 - cache-reset.js
 - service-worker.js
+
+Pēc Commit aizver visas PPS cilnes, atver no jauna un nospied Ctrl+Shift+R.
