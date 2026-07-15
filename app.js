@@ -13,7 +13,7 @@ const firebaseConfig={
   appId:"1:431301329254:web:bd3940bfff0c41d4e508a7"
 };
 const app=initializeApp(firebaseConfig),db=getFirestore(app),$=id=>document.getElementById(id);
-const S={factories:[],workers:[],objects:[],panels:[],sessions:[],preview:[],workerId:localStorage.getItem("pps_worker_id")||null};
+const S={factories:[],workers:[],objects:[],panels:[],sessions:[],preview:[],workerId:localStorage.getItem("pps_worker_id")||null,role:localStorage.getItem("pps_role")||null,adminName:localStorage.getItem("pps_admin_name")||""};
 
 const by=(list,id)=>list.find(x=>x.id===id);
 const toDate=v=>!v?null:typeof v.toDate==="function"?v.toDate():new Date(v);
@@ -23,6 +23,32 @@ const elapsed=s=>{let t=s?.accumulatedSeconds||0;if(s?.status==="Procesā"&&s.la
 const currentWorker=()=>by(S.workers,S.workerId);
 const activeForWorker=id=>S.sessions.find(s=>s.workerId===id&&(s.status==="Procesā"||s.status==="Pauzē"));
 const activeForPanel=id=>S.sessions.filter(s=>s.panelId===id&&(s.status==="Procesā"||s.status==="Pauzē"));
+let selectedLoginRole=S.role||"worker";
+
+function applyRoleUi(){
+  document.body.classList.remove("role-worker","role-admin");
+  if(S.role==="worker")document.body.classList.add("role-worker");
+  if(S.role==="admin")document.body.classList.add("role-admin");
+
+  const workerTab=document.querySelector('[data-main-view="productionView"]');
+  const adminTab=document.querySelector('[data-main-view="adminView"]');
+
+  if(S.role==="worker"){
+    workerTab?.classList.add("active");
+    adminTab?.classList.remove("active");
+    $("productionView")?.classList.remove("hidden");
+    $("adminView")?.classList.add("hidden");
+  }else if(S.role==="admin"){
+    adminTab?.classList.add("active");
+    workerTab?.classList.remove("active");
+    $("adminView")?.classList.remove("hidden");
+    $("productionView")?.classList.add("hidden");
+  }
+}
+
+function factoryIdForCurrentWorker(){
+  return currentWorker()?.factoryId||null;
+}
 const naturalPanelSort=(a,b)=>String(a.panelName||"").localeCompare(
   String(b.panelName||""),
   "lv",
@@ -58,6 +84,8 @@ function mapRow(row,defaultFactoryName){
 
 function setupNav(){
   document.querySelectorAll(".main-tab").forEach(b=>b.onclick=()=>{
+    if(S.role==="worker"&&b.dataset.mainView==="adminView")return;
+    if(S.role==="admin"&&b.dataset.mainView==="productionView")return;
     document.querySelectorAll(".main-tab").forEach(x=>x.classList.remove("active"));
     document.querySelectorAll(".main-view").forEach(x=>x.classList.add("hidden"));
     b.classList.add("active");$(b.dataset.mainView).classList.remove("hidden");
@@ -72,17 +100,47 @@ function setupNav(){
 function renderIdentity(){
   fill($("identityFactory"),S.factories);
   fill($("identityWorker"),S.workers.filter(w=>w.factoryId===$("identityFactory")?.value));
-  const w=currentWorker();
-  $("identityCard").classList.toggle("hidden",!!w);$("workerCard").classList.toggle("hidden",!w);
-  if(w){
-    $("workerTitle").textContent=w.name;$("workerFactoryLabel").textContent=by(S.factories,w.factoryId)?.name||"";
-    $("currentUserBadge").textContent=w.name;$("currentUserBadge").className="badge info";
-  }else{
-    $("currentUserBadge").textContent="Darbinieks nav izvēlēts";$("currentUserBadge").className="badge muted";
+
+  const hasIdentity=S.role==="admin" || (S.role==="worker" && currentWorker());
+
+  $("identityCard").classList.toggle("hidden",hasIdentity);
+  $("workerCard").classList.toggle("hidden",S.role!=="worker"||!currentWorker());
+
+  if($("workerLoginFields")){
+    $("workerLoginFields").classList.toggle("hidden",selectedLoginRole!=="worker");
   }
+  if($("adminLoginFields")){
+    $("adminLoginFields").classList.toggle("hidden",selectedLoginRole!=="admin");
+  }
+
+  $("chooseWorkerRole")?.classList.toggle("active",selectedLoginRole==="worker");
+  $("chooseAdminRole")?.classList.toggle("active",selectedLoginRole==="admin");
+
+  if(S.role==="worker"&&currentWorker()){
+    const w=currentWorker();
+    $("workerTitle").textContent=w.name;
+    $("workerFactoryLabel").textContent=by(S.factories,w.factoryId)?.name||"";
+    $("currentUserBadge").textContent=w.name;
+    $("currentUserBadge").className="badge info";
+    $("currentRoleBadge").textContent="Darbinieks";
+    $("currentRoleBadge").className="badge info";
+  }else if(S.role==="admin"){
+    $("currentUserBadge").textContent=S.adminName||"Administrators";
+    $("currentUserBadge").className="badge info";
+    $("currentRoleBadge").textContent="Administrators";
+    $("currentRoleBadge").className="badge info";
+  }else{
+    $("currentUserBadge").textContent="Lietotājs nav izvēlēts";
+    $("currentUserBadge").className="badge muted";
+    $("currentRoleBadge").textContent="Loma nav izvēlēta";
+    $("currentRoleBadge").className="badge muted";
+  }
+
+  applyRoleUi();
 }
 
 function renderProduction(){
+  if(S.role!=="worker")return;
   const w=currentWorker();if(!w)return;
   const objects=S.objects.filter(o=>S.panels.some(p=>p.objectId===o.id&&p.factoryId===w.factoryId));
   fill($("workerObject"),objects,"Visi objekti");
@@ -127,7 +185,9 @@ async function startSession(panelId){
 }
 
 function renderLive(){
-  fill($("liveFactory"),S.factories,"Visas rūpnīcas");fill($("liveObject"),S.objects,"Visi objekti");
+  fill($("liveFactory"),S.factories,S.role==="admin"?"Visas rūpnīcas":null);
+  if(S.role==="worker"&&factoryIdForCurrentWorker())$("liveFactory").value=factoryIdForCurrentWorker();
+  fill($("liveObject"),S.objects,"Visi objekti");
   const ff=$("liveFactory").value,fo=$("liveObject").value,panels=S.panels.filter(p=>(!ff||p.factoryId===ff)&&(!fo||p.objectId===fo));
   $("liveSummary").innerHTML=`<div><span>Nav sākts</span><strong>${panels.filter(p=>p.status==="Nav sākts").length}</strong></div><div><span>Procesā</span><strong>${panels.filter(p=>p.status==="Procesā").length}</strong></div><div><span>Pauzē</span><strong>${panels.filter(p=>p.status==="Pauzē").length}</strong></div><div><span>Pabeigts</span><strong>${panels.filter(p=>p.status==="Pabeigts").length}</strong></div>`;
   const sessions=S.sessions.filter(s=>(s.status==="Procesā"||s.status==="Pauzē")&&(!ff||s.factoryId===ff)&&(!fo||s.objectId===fo)),box=$("liveSessions");box.innerHTML="";
@@ -153,7 +213,10 @@ function filteredSessions(){
   });
 }
 function renderReport(){
-  fill($("overviewFactory"),S.factories,"Visas rūpnīcas");fill($("overviewObject"),S.objects,"Visi objekti");fill($("overviewWorker"),S.workers,"Visi darbinieki");
+  fill($("overviewFactory"),S.factories,S.role==="admin"?"Visas rūpnīcas":null);
+  if(S.role==="worker"&&factoryIdForCurrentWorker())$("overviewFactory").value=factoryIdForCurrentWorker();
+  fill($("overviewObject"),S.objects,"Visi objekti");
+  fill($("overviewWorker"),S.workers,"Visi darbinieki");
   const ff=$("overviewFactory").value,fo=$("overviewObject").value,panels=S.panels.filter(p=>(!ff||p.factoryId===ff)&&(!fo||p.objectId===fo)),sessions=filteredSessions();
   $("countNotStarted").textContent=panels.filter(p=>p.status==="Nav sākts").length;$("countRunning").textContent=panels.filter(p=>p.status==="Procesā").length;$("countPaused").textContent=panels.filter(p=>p.status==="Pauzē").length;$("countDone").textContent=panels.filter(p=>p.status==="Pabeigts").length;$("totalTime").textContent=hms(sessions.reduce((a,s)=>a+elapsed(s),0));
   const body=$("overviewBody");body.innerHTML="";
@@ -166,7 +229,8 @@ function statusLabel(p){
   return {text:"Brīvs",cls:""};
 }
 function renderPanels(){
-  fill($("assignFactory"),S.factories,"Visas rūpnīcas");
+  fill($("assignFactory"),S.factories,S.role==="admin"?"Visas rūpnīcas":null);
+  if(S.role==="worker"&&factoryIdForCurrentWorker())$("assignFactory").value=factoryIdForCurrentWorker();
   fill($("assignObject"),S.objects,"Visi objekti");
 
   const ff=$("assignFactory").value;
@@ -323,6 +387,7 @@ function renderPanels(){
 }
 
 async function deletePanel(id){
+  if(S.role!=="admin")return alert("Šī darbība pieejama tikai administratoram.");
   const p=by(S.panels,id);if(!p)return;if(activeForPanel(id).length)return alert("Aktīvu paneli nevar dzēst.");
   const sessions=S.sessions.filter(s=>s.panelId===id);if(!confirm(`Dzēst ${p.panelName} un ${sessions.length} darba sesijas?`))return;
   for(let i=0;i<sessions.length;i+=450){const b=writeBatch(db);sessions.slice(i,i+450).forEach(s=>b.delete(doc(db,"sessions",s.id)));await b.commit()}
@@ -342,6 +407,7 @@ function renderWorkers(){
   });
 }
 async function deleteWorker(id){
+  if(S.role!=="admin")return alert("Šī darbība pieejama tikai administratoram.");
   const w=by(S.workers,id);if(activeForWorker(id))return alert("Darbiniekam ir aktīvs darbs.");
   if(!confirm(`Dzēst darbinieku ${w.name}?`))return;
   for(const p of S.panels.filter(p=>(p.assignedWorkerIds||[]).includes(id)))await updateDoc(doc(db,"panels",p.id),{assignedWorkerIds:(p.assignedWorkerIds||[]).filter(x=>x!==id)});
@@ -382,7 +448,52 @@ function subscribe(name,key){onSnapshot(collection(db,name),snap=>{S[key]=snap.d
 setupNav();
 subscribe("factories","factories");subscribe("workers","workers");subscribe("objects","objects");subscribe("panels","panels");subscribe("sessions","sessions");
 
-$("identityFactory").onchange=renderIdentity;$("saveIdentityBtn").onclick=()=>{if(!$("identityWorker").value)return alert("Izvēlies darbinieku.");S.workerId=$("identityWorker").value;localStorage.setItem("pps_worker_id",S.workerId);renderAll()};$("changeIdentityBtn").onclick=()=>{S.workerId=null;localStorage.removeItem("pps_worker_id");renderAll()};
+$("identityFactory").onchange=renderIdentity;
+
+$("chooseWorkerRole").onclick=()=>{
+  selectedLoginRole="worker";
+  renderIdentity();
+};
+
+$("chooseAdminRole").onclick=()=>{
+  selectedLoginRole="admin";
+  renderIdentity();
+};
+
+$("saveIdentityBtn").onclick=()=>{
+  if(selectedLoginRole==="worker"){
+    if(!$("identityWorker").value)return alert("Izvēlies darbinieku.");
+    S.role="worker";
+    S.workerId=$("identityWorker").value;
+    S.adminName="";
+    localStorage.setItem("pps_role","worker");
+    localStorage.setItem("pps_worker_id",S.workerId);
+    localStorage.removeItem("pps_admin_name");
+  }else{
+    const name=$("adminDisplayName").value.trim()||"Administrators";
+    S.role="admin";
+    S.adminName=name;
+    S.workerId=null;
+    localStorage.setItem("pps_role","admin");
+    localStorage.setItem("pps_admin_name",name);
+    localStorage.removeItem("pps_worker_id");
+  }
+  renderAll();
+};
+
+function clearCurrentIdentity(){
+  S.role=null;
+  S.workerId=null;
+  S.adminName="";
+  selectedLoginRole="worker";
+  localStorage.removeItem("pps_role");
+  localStorage.removeItem("pps_worker_id");
+  localStorage.removeItem("pps_admin_name");
+  renderAll();
+}
+
+$("changeIdentityBtn").onclick=clearCurrentIdentity;
+$("changeRoleBtn").onclick=clearCurrentIdentity;
 $("workerObject").onchange=renderProduction;$("workerPanelSearch").oninput=renderProduction;
 $("workerPauseBtn").onclick=async()=>{const s=activeForWorker(S.workerId);if(!s)return;if(s.status==="Procesā"){await updateDoc(doc(db,"sessions",s.id),{status:"Pauzē",accumulatedSeconds:elapsed(s),lastResumeAt:null})}else await updateDoc(doc(db,"sessions",s.id),{status:"Procesā",lastResumeAt:serverTimestamp()})};
 $("workerFinishBtn").onclick=async()=>{const s=activeForWorker(S.workerId);if(!s||!confirm(`Pabeigt savu darbu pie ${s.panelName}?`))return;await updateDoc(doc(db,"sessions",s.id),{status:"Pabeigts",accumulatedSeconds:elapsed(s),lastResumeAt:null,endAt:serverTimestamp()})};

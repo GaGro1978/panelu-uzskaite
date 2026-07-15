@@ -619,3 +619,59 @@ td{
     font-size:12px;
   }
 }
+
+/* PPS V3.6 — lomas */
+.role-switch{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:10px;
+  margin:16px 0 12px;
+}
+.role-card{
+  border:1px solid var(--line);
+  background:#f8fafc;
+  border-radius:12px;
+  padding:14px;
+  text-align:left;
+  cursor:pointer;
+}
+.role-card strong,
+.role-card span{
+  display:block;
+}
+.role-card strong{
+  font-size:18px;
+}
+.role-card span{
+  color:var(--muted);
+  font-size:13px;
+  margin-top:4px;
+}
+.role-card.active{
+  border-color:#6f8fe0;
+  background:#eaf0ff;
+  box-shadow:0 0 0 3px rgba(37,99,235,.08);
+}
+body.role-worker [data-main-view="adminView"]{
+  display:none!important;
+}
+body.role-worker .main-nav{
+  grid-template-columns:1fr;
+}
+body.role-admin [data-main-view="productionView"]{
+  display:none!important;
+}
+body.role-admin .main-nav{
+  grid-template-columns:1fr;
+}
+body.role-admin #productionView{
+  display:none!important;
+}
+body.role-worker #adminView{
+  display:none!important;
+}
+@media(max-width:620px){
+  .role-switch{
+    grid-template-columns:1fr;
+  }
+}

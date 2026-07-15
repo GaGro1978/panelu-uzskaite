@@ -1,15 +1,24 @@
-PPS V3.5
+PPS V3.6 — LOMAS
 
-Izmaiņas:
-- galvenie fonti palielināti aptuveni par 20%;
-- paneļi Ražošanā un Pārvaldībā tiek kārtoti pēc nosaukuma;
-- tiek izmantota dabiskā ciparu secība:
-  1R-E2, 1R-E3, 1R-E10;
-- statusi ir iekrāsoti:
-  zaļš — Brīvs,
-  oranžs — Procesā,
-  zils — Pabeigts;
-- saglabāts kompaktais izkārtojums līdz aptuveni 6 darbiniekiem.
+Lomas:
+1. Darbinieks
+   - izvēlas rūpnīcu un savu vārdu;
+   - redz tikai Ražošanu;
+   - redz tikai savas rūpnīcas paneļus;
+   - Pārvaldība nav pieejama.
+
+2. Administrators
+   - ievada savu nosaukumu;
+   - redz tikai Pārvaldību;
+   - redz visas rūpnīcas;
+   - var pārvaldīt paneļus, darbiniekus, rūpnīcas, importu un pārskatus.
+
+Loma tiek saglabāta konkrētajā ierīcē.
+Mainīt lietotāju var ar pogu “Mainīt” vai “Mainīt lietotāju”.
+
+SVARĪGI
+Šī versija ievieš lietotāja interfeisa lomas, bet vēl ne Firebase Authentication.
+Pilnai drošībai nākamajā posmā būs jāievieš Firebase Auth un Firestore noteikumi.
 
 GitHub aizvieto:
 - index.html
@@ -17,5 +26,3 @@ GitHub aizvieto:
 - app.js
 - cache-reset.js
 - service-worker.js
-
-Pēc Commit aizver visas PPS cilnes, atver no jauna un nospied Ctrl+Shift+R.

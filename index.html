@@ -4,17 +4,17 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#111827">
-  <title>PPS V3.5</title>
+  <title>PPS V3.6</title>
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
 <header class="app-header">
   <div>
-    <h1>PPS V3.5</h1>
+    <h1>PPS V3.6</h1>
     <p>Paneļu ražošanas uzskaite</p>
   </div>
   <div class="header-badges">
-    <span id="currentUserBadge" class="badge muted">Darbinieks nav izvēlēts</span>
+    <span id="currentRoleBadge" class="badge muted">Loma nav izvēlēta</span><span id="currentUserBadge" class="badge muted">Lietotājs nav izvēlēts</span>
     <span id="connectionBadge" class="badge wait">Savienojas…</span>
   </div>
 </header>
@@ -27,25 +27,45 @@
 <main>
   <section id="productionView" class="main-view">
     <article id="identityCard" class="surface production-shell">
-      <div class="section-title">
-        <div>
-          <span class="eyebrow">DARBA TELEFONS</span>
-          <h2>Izvēlies sevi</h2>
-          <p>Izvēle saglabāsies šajā telefonā.</p>
-        </div>
+  <div class="section-title">
+    <div>
+      <span class="eyebrow">PIEKĻUVE</span>
+      <h2>Izvēlies režīmu</h2>
+      <p>Izvēle saglabāsies šajā ierīcē.</p>
+    </div>
+  </div>
+
+  <div class="role-switch">
+    <button id="chooseWorkerRole" class="role-card active" type="button">
+      <strong>Darbinieks</strong>
+      <span>Ražošana savā rūpnīcā</span>
+    </button>
+    <button id="chooseAdminRole" class="role-card" type="button">
+      <strong>Administrators</strong>
+      <span>Pārvaldība visām rūpnīcām</span>
+    </button>
+  </div>
+
+  <div id="workerLoginFields">
+    <div class="form-grid two">
+      <div>
+        <label>Rūpnīca</label>
+        <select id="identityFactory"></select>
       </div>
-      <div class="form-grid two">
-        <div>
-          <label>Rūpnīca</label>
-          <select id="identityFactory"></select>
-        </div>
-        <div>
-          <label>Darbinieks</label>
-          <select id="identityWorker"></select>
-        </div>
+      <div>
+        <label>Darbinieks</label>
+        <select id="identityWorker"></select>
       </div>
-      <button id="saveIdentityBtn" class="btn primary full">SAGLABĀT</button>
-    </article>
+    </div>
+  </div>
+
+  <div id="adminLoginFields" class="hidden">
+    <label>Administratora vārds</label>
+    <input id="adminDisplayName" placeholder="Piemēram, Ražošanas vadītājs">
+  </div>
+
+  <button id="saveIdentityBtn" class="btn primary full">SAGLABĀT</button>
+</article>
 
     <article id="workerCard" class="surface production-shell hidden">
       <div class="worker-head">
@@ -84,7 +104,10 @@
   <section id="adminView" class="main-view hidden">
     <article class="surface admin-shell">
       <div class="admin-header">
-        <div>
+  <div>
+    <button id="changeRoleBtn" class="btn ghost small" type="button">Mainīt lietotāju</button>
+  </div>
+  <div>
           <span class="eyebrow">ADMINISTRĀCIJA</span>
           <h2>Pārvaldība</h2>
           <p>Visas administrācijas funkcijas vienuviet.</p>
@@ -283,6 +306,6 @@
 
 <script src="cache-reset.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script type="module" src="app.js?v=3.5"></script>
+<script type="module" src="app.js?v=3.6"></script>
 </body>
 </html>
