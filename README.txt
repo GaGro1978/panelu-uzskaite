@@ -1,13 +1,14 @@
-PPS V2.6 — PANEĻA VADĪKLAS VIENĀ RINDĀ
+PPS V3
 
-Labojums Pārvaldība > Paneļi:
-- “Izvēlēties pārcelšanai”;
-- darbinieku ķeksīši;
-- rūpnīcas izvēle;
-
-tagad atrodas vienā horizontālā rindā.
-
-Telefonā rinda ir horizontāli ritināma, lai kartīte nekļūtu ļoti augsta.
+Struktūra:
+- augšā tikai Ražošana un Pārvaldība;
+- Ražošana ir kompakta un paredzēta telefonam;
+- Pārvaldībā ir Aktīvie darbi, Pārskats, Paneļi, Darbinieki, Rūpnīcas un Imports;
+- paneļu pārvaldības rinda ir viena horizontāla rinda:
+  objekts/statuss | paneļa Nr | statuss | darbinieku čipi | rūpnīca | dzēst;
+- darbinieku čipi darbojas bez checkbox;
+- rūpnīcu maina tieši ar rūpnīcas izvēlni;
+- visi objekta paneļi dzēšami tikai Pārvaldība > Paneļi > Bīstamā zona.
 
 GitHub aizvieto:
 - index.html
@@ -16,4 +17,4 @@ GitHub aizvieto:
 - cache-reset.js
 - service-worker.js
 
-Pēc Commit aizver visas PPS cilnes, atver no jauna un nospied Ctrl+Shift+R.
+Pēc Commit aizver visas PPS cilnes un atver no jauna.

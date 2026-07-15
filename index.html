@@ -1,83 +1,285 @@
-<!doctype html><html lang="lv"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#111827"><title>PPS V2</title><link rel="stylesheet" href="styles.css"></head><body>
-<header><div><h1>PPS V2</h1><p>Paneļu ražošanas uzskaite</p></div><div class="headbadges"><span id="userBadge" class="badge muted">Darbinieks nav izvēlēts</span><span id="conn" class="badge wait">Savienojas…</span></div></header>
-<nav><button class="tab active" data-v="prod">Ražošana</button><button class="tab" data-v="live">Dzīvais skats</button><button class="tab" data-v="report">Pārskats</button><button class="tab" data-v="import">Imports</button><button class="tab" data-v="admin">Pārvaldība</button></nav>
+<!DOCTYPE html>
+<html lang="lv">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#111827">
+  <title>PPS V3</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<header class="app-header">
+  <div>
+    <h1>PPS V3</h1>
+    <p>Paneļu ražošanas uzskaite</p>
+  </div>
+  <div class="header-badges">
+    <span id="currentUserBadge" class="badge muted">Darbinieks nav izvēlēts</span>
+    <span id="connectionBadge" class="badge wait">Savienojas…</span>
+  </div>
+</header>
+
+<nav class="main-nav">
+  <button class="main-tab active" data-main-view="productionView">Ražošana</button>
+  <button class="main-tab" data-main-view="adminView">Pārvaldība</button>
+</nav>
+
 <main>
-<section id="prodView" class="view">
-<article id="identityCard" class="card"><h2>Izvēlies sevi</h2><p class="hint">Izvēle saglabāsies šajā telefonā.</p><label>Rūpnīca</label><select id="idFactory"></select><label>Darbinieks</label><select id="idWorker"></select><button id="saveIdentity" class="primary big">SAGLABĀT</button></article>
-<article id="workerCard" class="card hidden"><div class="title"><div><h2 id="workerName">Darbinieks</h2><p id="workerFactory" class="hint"></p></div><button id="changeIdentity" class="secondary small">Mainīt</button></div>
-<div id="noActive"><label>Objekts</label><select id="workerObject"></select><label>Meklēt paneli</label><input id="workerSearch" placeholder="Piemēram, 1SB-01"><div class="legend"><span>🔵 Piešķirts tev</span><span>🟢 Brīvs</span><span>🟡 Pie paneļa strādā citi</span></div><div id="workerPanels" class="panelList"></div></div>
-<div id="activeBlock" class="hidden"><div class="hero"><span>Tu strādā pie paneļa</span><strong id="activePanel">—</strong><small id="activeObject">—</small></div><div id="timer">00:00:00</div><div id="otherWorkers" class="hint center"></div><div class="actions"><button id="pauseBtn" class="warning">PAUZE</button><button id="finishOwnBtn" class="danger">PABEIGT SAVU DARBU</button></div></div>
-</article></section>
+  <section id="productionView" class="main-view">
+    <article id="identityCard" class="surface production-shell">
+      <div class="section-title">
+        <div>
+          <span class="eyebrow">DARBA TELEFONS</span>
+          <h2>Izvēlies sevi</h2>
+          <p>Izvēle saglabāsies šajā telefonā.</p>
+        </div>
+      </div>
+      <div class="form-grid two">
+        <div>
+          <label>Rūpnīca</label>
+          <select id="identityFactory"></select>
+        </div>
+        <div>
+          <label>Darbinieks</label>
+          <select id="identityWorker"></select>
+        </div>
+      </div>
+      <button id="saveIdentityBtn" class="btn primary full">SAGLABĀT</button>
+    </article>
 
-<section id="liveView" class="view hidden"><article class="card"><div class="title wrap"><h2>Dzīvais ražošanas skats</h2><div class="filters"><select id="liveFactory"></select><select id="liveObject"></select></div></div><div id="liveSummary" class="summary4"></div><div id="liveCards" class="liveGrid"></div></article></section>
+    <article id="workerCard" class="surface production-shell hidden">
+      <div class="worker-head">
+        <div>
+          <span class="eyebrow">RAŽOŠANA</span>
+          <h2 id="workerTitle">Darbinieks</h2>
+          <p id="workerFactoryLabel"></p>
+        </div>
+        <button id="changeIdentityBtn" class="btn ghost small">Mainīt</button>
+      </div>
 
-<section id="reportView" class="view hidden"><article class="card"><div class="title wrap"><h2>Pārskats</h2><button id="exportCsv" class="secondary">EKSPORTĒT CSV</button></div>
-<div class="reportFilters"><div><label>Periods</label><select id="period"><option value="today">Šodien</option><option value="yesterday">Vakar</option><option value="week">Šonedēļ</option><option value="month">Šomēnes</option><option value="all">Viss periods</option></select></div><div><label>Rūpnīca</label><select id="repFactory"></select></div><div><label>Objekts</label><select id="repObject"></select></div><div><label>Darbinieks</label><select id="repWorker"></select></div><div><label>Panelis</label><input id="repSearch" placeholder="Meklēt"></div></div>
-<div class="summary5"><div><span>Nav sākts</span><strong id="cNew">0</strong></div><div><span>Procesā</span><strong id="cRun">0</strong></div><div><span>Pauzē</span><strong id="cPause">0</strong></div><div><span>Pabeigts</span><strong id="cDone">0</strong></div><div><span>Darba stundas</span><strong id="cTime">00:00:00</strong></div></div>
-<div class="tableWrap"><table><thead><tr><th>Rūpnīca</th><th>Objekts</th><th>Panelis</th><th>Darbinieks</th><th>Sesija</th><th>Panelis</th><th>Sākums</th><th>Beigas</th><th>Laiks</th></tr></thead><tbody id="reportBody"></tbody></table></div></article></section>
+      <div id="workerNoActive">
+        <div class="production-filters">
+          <select id="workerObject"></select>
+          <input id="workerPanelSearch" placeholder="Meklēt paneli">
+        </div>
+        <div id="workerPanelList" class="production-list"></div>
+      </div>
 
-<section id="importView" class="view hidden"><article class="card"><h2>Izveidot objektu</h2><div class="row"><input id="objectName" placeholder="Piemēram, Islande 01"><button id="createObject" class="primary">IZVEIDOT</button></div><div id="objectMsg" class="msg"></div></article>
-<article class="card"><h2>Importēt paneļus no Excel</h2><label>Objekts</label><select id="importObject"></select><label>Rūpnīca, ja Excel kolonna “Rūpnīca” ir tukša</label><select id="defaultFactory"></select><label>Excel fails</label><input id="excelFile" type="file" accept=".xlsx,.xls,.csv"><button id="previewBtn" class="secondary big">PĀRBAUDĪT FAILU</button><button id="importBtn" class="primary big" disabled>IMPORTĒT PANEĻUS</button><div id="importMsg" class="msg"></div></article>
-<article id="previewCard" class="card hidden"><div class="title"><h2>Priekšskatījums</h2><span id="previewCount" class="badge info">0 rindas</span></div><div id="previewSummary" class="hint"></div><div class="tableWrap"><table><thead><tr><th>Statuss</th><th>Panelis</th><th>Skaits</th><th>Garums</th><th>Biezums</th><th>Augstums</th><th>Svars</th><th>Platība</th><th>Tips</th><th>Rūpnīca</th></tr></thead><tbody id="previewBody"></tbody></table></div></article></section>
+      <div id="workerActiveBlock" class="hidden">
+        <div class="active-panel-card">
+          <span>Tu strādā pie paneļa</span>
+          <strong id="workerActivePanel">—</strong>
+          <small id="workerActiveObject">—</small>
+        </div>
+        <div id="workerTimer" class="timer">00:00:00</div>
+        <div id="otherWorkersActive" class="other-workers"></div>
+        <div class="active-actions">
+          <button id="workerPauseBtn" class="btn warning">PAUZE</button>
+          <button id="workerFinishBtn" class="btn danger">PABEIGT SAVU DARBU</button>
+        </div>
+      </div>
+    </article>
+  </section>
 
-<section id="adminView" class="view hidden"><article class="card"><h2>Pievienot datus</h2><div class="adminGrid"><div><h3>Rūpnīca</h3><input id="newFactory" placeholder="Ventspils"><button id="addFactory" class="secondary">PIEVIENOT</button></div><div><h3>Darbinieks</h3><input id="newWorker" placeholder="Vārds"><select id="newWorkerFactory"></select><button id="addWorker" class="secondary">PIEVIENOT</button></div></div><div id="adminMsg" class="msg"></div></article>
-<article class="card">
-  <h2>Datu pārvaldība</h2>
-  <p class="hint">Šeit vari dzēst darbiniekus un tukšas rūpnīcas, kā arī pārcelt darbiniekus uz citu rūpnīcu.</p>
+  <section id="adminView" class="main-view hidden">
+    <article class="surface admin-shell">
+      <div class="admin-header">
+        <div>
+          <span class="eyebrow">ADMINISTRĀCIJA</span>
+          <h2>Pārvaldība</h2>
+          <p>Visas administrācijas funkcijas vienuviet.</p>
+        </div>
+      </div>
 
-  <div class="adminSection">
-    <div class="adminSectionTitle">
-      <h3>Rūpnīcas</h3>
-      <span class="hint">Poga DZĒST parādās pie katras rūpnīcas.</span>
-    </div>
-    <div id="factoryManage" class="manageList"></div>
-  </div>
+      <nav class="admin-nav">
+        <button class="admin-tab active" data-admin-view="livePanel">Aktīvie darbi</button>
+        <button class="admin-tab" data-admin-view="reportPanel">Pārskats</button>
+        <button class="admin-tab" data-admin-view="panelsPanel">Paneļi</button>
+        <button class="admin-tab" data-admin-view="workersPanel">Darbinieki</button>
+        <button class="admin-tab" data-admin-view="factoriesPanel">Rūpnīcas</button>
+        <button class="admin-tab" data-admin-view="importPanel">Imports</button>
+      </nav>
 
-  <div class="adminSection">
-    <div class="adminSectionTitle">
-      <h3>Darbinieki</h3>
-      <span class="hint">Izvēlies jaunu rūpnīcu vai nospied DZĒST.</span>
-    </div>
-    <div id="workerManage" class="manageList"></div>
-  </div>
-</article>
-<article class="card"><div class="title wrap"><h2>Paneļu piešķiršana un pārcelšana</h2><div class="filters"><select id="assignFactory"></select><select id="assignObject"></select><input id="assignSearch" placeholder="Meklēt paneli"></div></div><p class="hint">Atzīmē darbiniekus, izvēlies panelim citu rūpnīcu vai ar ķeksīšiem pārcel vairākus paneļus reizē.</p>
-<div class="bulkTransfer">
-  <select id="transferFactory"><option value="">Pārcelt izvēlētos uz rūpnīcu…</option></select>
-  <button id="transferSelected" class="secondary">PĀRCELT IZVĒLĒTOS</button>
-</div>
-<div id="assignList" class="assignList"></div></article>
-<article class="card"><h2>Paneļu pabeigšana un dzēšana</h2><div id="panelAdmin" class="assignList"></div>
+      <section id="livePanel" class="admin-panel">
+        <div class="panel-header">
+          <div>
+            <h3>Aktīvie darbi</h3>
+            <p>Reāllaikā redzams, kurš pie kā strādā.</p>
+          </div>
+          <div class="inline-filters">
+            <select id="liveFactory"></select>
+            <select id="liveObject"></select>
+          </div>
+        </div>
+        <div id="liveSummary" class="summary-grid four"></div>
+        <div id="liveSessions" class="live-grid"></div>
+      </section>
 
-<details class="dangerDetails">
-  <summary>
-    <span>
-      <strong>Dzēst visus objekta paneļus</strong>
-      <small>Izmanto tikai kļūdaina importa gadījumā</small>
-    </span>
-    <span class="dangerTag">BĪSTAMĀ ZONA</span>
-  </summary>
-  <div class="dangerDetailsBody">
-    
-  <span class="dangerEyebrow">BĪSTAMĀ ZONA</span>
-  <h2>Dzēst visus objekta paneļus</h2>
-  <p class="hint">Izmanto tikai tad, ja paneļu saraksts ieimportēts kļūdaini. Tiks dzēsti arī šo paneļu darba sesiju ieraksti.</p>
-  <div class="dangerGrid">
-    <div>
-      <label>Objekts</label>
-      <select id="deleteObjectSelect"></select>
-    </div>
-    <div>
-      <label>Apstiprināšanai ieraksti objekta nosaukumu</label>
-      <input id="deleteObjectConfirm" placeholder="Objekta nosaukums">
-    </div>
-  </div>
-  <div id="deleteObjectSummary" class="deleteSummary">Izvēlies objektu.</div>
-  <button id="deleteAllObjectPanelsBtn" class="danger big" disabled>DZĒST VISUS OBJEKTA PANEĻUS</button>
+      <section id="reportPanel" class="admin-panel hidden">
+        <div class="panel-header">
+          <div>
+            <h3>Pārskats</h3>
+            <p>Darba sesijas, laiki un eksports.</p>
+          </div>
+          <button id="exportCsvBtn" class="btn ghost">EKSPORTĒT CSV</button>
+        </div>
+        <div class="report-filters">
+          <select id="datePreset">
+            <option value="today">Šodien</option>
+            <option value="yesterday">Vakar</option>
+            <option value="week">Šonedēļ</option>
+            <option value="month">Šomēnes</option>
+            <option value="all">Viss periods</option>
+          </select>
+          <select id="overviewFactory"></select>
+          <select id="overviewObject"></select>
+          <select id="overviewWorker"></select>
+          <input id="overviewSearch" placeholder="Meklēt paneli">
+        </div>
+        <div class="summary-grid five">
+          <div><span>Nav sākts</span><strong id="countNotStarted">0</strong></div>
+          <div><span>Procesā</span><strong id="countRunning">0</strong></div>
+          <div><span>Pauzē</span><strong id="countPaused">0</strong></div>
+          <div><span>Pabeigts</span><strong id="countDone">0</strong></div>
+          <div><span>Darba stundas</span><strong id="totalTime">00:00:00</strong></div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>Rūpnīca</th><th>Objekts</th><th>Panelis</th><th>Darbinieks</th><th>Sesijas statuss</th><th>Paneļa statuss</th><th>Sākums</th><th>Beigas</th><th>Laiks</th></tr>
+            </thead>
+            <tbody id="overviewBody"></tbody>
+          </table>
+        </div>
+      </section>
 
-  </div>
-</details></article></section>
+      <section id="panelsPanel" class="admin-panel hidden">
+        <div class="panel-header">
+          <div>
+            <h3>Paneļi</h3>
+            <p>Viss vienā kompaktā rindā.</p>
+          </div>
+          <div class="inline-filters">
+            <select id="assignFactory"></select>
+            <select id="assignObject"></select>
+            <input id="assignSearch" placeholder="Meklēt paneli">
+          </div>
+        </div>
+        <div id="assignList" class="panel-admin-list"></div>
 
+        <details class="danger-zone">
+          <summary>
+            <span>
+              <strong>Dzēst visus objekta paneļus</strong>
+              <small>Izmanto tikai kļūdaina importa gadījumā</small>
+            </span>
+            <span class="danger-pill">BĪSTAMĀ ZONA</span>
+          </summary>
+          <div class="danger-body">
+            <div class="form-grid two">
+              <div>
+                <label>Objekts</label>
+                <select id="deleteObjectSelect"></select>
+              </div>
+              <div>
+                <label>Ieraksti objekta nosaukumu</label>
+                <input id="deleteObjectConfirm" placeholder="Objekta nosaukums">
+              </div>
+            </div>
+            <div id="deleteObjectSummary" class="danger-summary">Izvēlies objektu.</div>
+            <button id="deleteAllObjectPanelsBtn" class="btn danger full" disabled>DZĒST VISUS OBJEKTA PANEĻUS</button>
+          </div>
+        </details>
+      </section>
 
+      <section id="workersPanel" class="admin-panel hidden">
+        <div class="panel-header">
+          <div>
+            <h3>Darbinieki</h3>
+            <p>Maini rūpnīcu vai dzēs darbinieku.</p>
+          </div>
+          <input id="workerManageSearch" placeholder="Meklēt darbinieku">
+        </div>
+        <div id="workerManage" class="manage-list"></div>
+        <div class="add-block">
+          <h4>Pievienot darbinieku</h4>
+          <div class="form-grid three">
+            <input id="newWorker" placeholder="Darbinieka vārds">
+            <select id="newWorkerFactory"></select>
+            <button id="addWorker" class="btn primary">PIEVIENOT</button>
+          </div>
+        </div>
+      </section>
+
+      <section id="factoriesPanel" class="admin-panel hidden">
+        <div class="panel-header">
+          <div>
+            <h3>Rūpnīcas</h3>
+            <p>Rūpnīcu var dzēst tikai tad, ja tā ir tukša.</p>
+          </div>
+        </div>
+        <div id="factoryManage" class="manage-list"></div>
+        <div class="add-block">
+          <h4>Pievienot rūpnīcu</h4>
+          <div class="form-grid two-action">
+            <input id="newFactory" placeholder="Rūpnīcas nosaukums">
+            <button id="addFactory" class="btn primary">PIEVIENOT</button>
+          </div>
+        </div>
+      </section>
+
+      <section id="importPanel" class="admin-panel hidden">
+        <div class="panel-header">
+          <div>
+            <h3>Imports</h3>
+            <p>Izveido objektu un importē paneļus no Excel.</p>
+          </div>
+        </div>
+
+        <div class="import-grid">
+          <div class="import-card">
+            <h4>1. Izveidot objektu</h4>
+            <input id="objectName" placeholder="Piemēram, ISL-24">
+            <button id="createObjectBtn" class="btn primary full">IZVEIDOT OBJEKTU</button>
+            <div id="objectMessage" class="message"></div>
+          </div>
+
+          <div class="import-card">
+            <h4>2. Importēt paneļus</h4>
+            <label>Objekts</label>
+            <select id="importObject"></select>
+            <label>Rūpnīca pēc noklusējuma</label>
+            <select id="defaultFactory"></select>
+            <label>Excel fails</label>
+            <input id="excelFile" type="file" accept=".xlsx,.xls,.csv">
+            <button id="previewBtn" class="btn ghost full">PĀRBAUDĪT FAILU</button>
+            <button id="importBtn" class="btn primary full" disabled>IMPORTĒT PANEĻUS</button>
+            <div id="importStatus" class="message"></div>
+          </div>
+        </div>
+
+        <div id="previewCard" class="preview-card hidden">
+          <div class="panel-header">
+            <h4>Importa priekšskatījums</h4>
+            <span id="previewCount" class="badge info">0 rindas</span>
+          </div>
+          <div id="validationSummary" class="preview-summary"></div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Statuss</th><th>Panelis</th><th>Skaits</th><th>Garums</th><th>Biezums</th><th>Augstums</th><th>Svars</th><th>Platība</th><th>Tips</th><th>Rūpnīca</th></tr></thead>
+              <tbody id="previewBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <div id="adminMessage" class="message"></div>
+    </article>
+  </section>
 </main>
-<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script><script src="cache-reset.js"></script><script type="module" src="app.js?v=2.6"></script></body></html>
+
+<script src="cache-reset.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script type="module" src="app.js?v=3.0"></script>
+</body>
+</html>
