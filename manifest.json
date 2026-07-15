@@ -1,9 +1,9 @@
 {
-  "name": "PPS — Paneļu ražošanas uzskaite",
+  "name": "PPS Paneļu ražošana",
   "short_name": "PPS",
   "start_url": "./",
   "display": "standalone",
-  "background_color": "#f3f4f6",
+  "background_color": "#f4f6f9",
   "theme_color": "#111827",
-  "lang": "lv"
+  "icons": []
 }

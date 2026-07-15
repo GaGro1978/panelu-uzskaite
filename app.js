@@ -13,7 +13,7 @@ const firebaseConfig={
   appId:"1:431301329254:web:bd3940bfff0c41d4e508a7"
 };
 const app=initializeApp(firebaseConfig),db=getFirestore(app),$=id=>document.getElementById(id);
-const S={factories:[],workers:[],objects:[],panels:[],sessions:[],preview:[],workerId:localStorage.getItem("pps_worker_id")||null,role:localStorage.getItem("pps_role")||null,adminName:localStorage.getItem("pps_admin_name")||""};
+const S={factories:[],workers:[],objects:[],panels:[],sessions:[],preview:[],workerId:localStorage.getItem("pps_worker_id")||null,role:localStorage.getItem("pps_role")||null,adminName:localStorage.getItem("pps_admin_name")||"",adminFactoryScope:localStorage.getItem("pps_admin_factory_scope")||""};
 
 const by=(list,id)=>list.find(x=>x.id===id);
 const toDate=v=>!v?null:typeof v.toDate==="function"?v.toDate():new Date(v);
@@ -39,15 +39,45 @@ function applyRoleUi(){
     $("productionView")?.classList.remove("hidden");
     $("adminView")?.classList.add("hidden");
   }else if(S.role==="admin"){
-    adminTab?.classList.add("active");
-    workerTab?.classList.remove("active");
-    $("adminView")?.classList.remove("hidden");
-    $("productionView")?.classList.add("hidden");
+    if(!adminTab?.classList.contains("active")&&!workerTab?.classList.contains("active")){
+      adminTab?.classList.add("active");
+    }
+    $("adminFactoryScopeWrap")?.classList.remove("hidden");
+    if(adminTab?.classList.contains("active")){
+      $("adminView")?.classList.remove("hidden");
+      $("productionView")?.classList.add("hidden");
+    }else{
+      $("productionView")?.classList.remove("hidden");
+      $("adminView")?.classList.add("hidden");
+    }
+  }else{
+    $("adminFactoryScopeWrap")?.classList.add("hidden");
   }
 }
 
 function factoryIdForCurrentWorker(){
   return currentWorker()?.factoryId||null;
+}
+
+function currentFactoryScope(){
+  if(S.role==="worker")return factoryIdForCurrentWorker();
+  if(S.role==="admin")return S.adminFactoryScope||"";
+  return "";
+}
+
+function scopedFactories(){
+  const scope=currentFactoryScope();
+  return scope?S.factories.filter(f=>f.id===scope):S.factories;
+}
+
+function scopedWorkers(){
+  const scope=currentFactoryScope();
+  return scope?S.workers.filter(w=>w.factoryId===scope):S.workers;
+}
+
+function scopedPanels(){
+  const scope=currentFactoryScope();
+  return scope?S.panels.filter(p=>p.factoryId===scope):S.panels;
 }
 const naturalPanelSort=(a,b)=>String(a.panelName||"").localeCompare(
   String(b.panelName||""),
@@ -85,7 +115,7 @@ function mapRow(row,defaultFactoryName){
 function setupNav(){
   document.querySelectorAll(".main-tab").forEach(b=>b.onclick=()=>{
     if(S.role==="worker"&&b.dataset.mainView==="adminView")return;
-    if(S.role==="admin"&&b.dataset.mainView==="productionView")return;
+    
     document.querySelectorAll(".main-tab").forEach(x=>x.classList.remove("active"));
     document.querySelectorAll(".main-view").forEach(x=>x.classList.add("hidden"));
     b.classList.add("active");$(b.dataset.mainView).classList.remove("hidden");
@@ -105,6 +135,7 @@ function renderIdentity(){
 
   $("identityCard").classList.toggle("hidden",hasIdentity);
   $("workerCard").classList.toggle("hidden",S.role!=="worker"||!currentWorker());
+  $("adminProductionCard")?.classList.toggle("hidden",S.role!=="admin");
 
   if($("workerLoginFields")){
     $("workerLoginFields").classList.toggle("hidden",selectedLoginRole!=="worker");
@@ -136,6 +167,10 @@ function renderIdentity(){
     $("currentRoleBadge").className="badge muted";
   }
 
+  if($("adminFactoryScope")){
+    fill($("adminFactoryScope"),S.factories,"Visas rūpnīcas");
+    $("adminFactoryScope").value=S.adminFactoryScope||"";
+  }
   applyRoleUi();
 }
 
@@ -184,9 +219,52 @@ async function startSession(panelId){
   });
 }
 
+
+function renderAdminProduction(){
+  if(S.role!=="admin")return;
+  const scope=currentFactoryScope();
+  const panels=S.panels.filter(p=>!scope||p.factoryId===scope);
+  const objects=S.objects.filter(o=>panels.some(p=>p.objectId===o.id));
+  fill($("adminProductionObject"),objects,"Visi objekti");
+
+  const objectId=$("adminProductionObject")?.value||"";
+  const q=$("adminProductionSearch")?.value.trim().toLowerCase()||"";
+  const box=$("adminProductionList");
+  if(!box)return;
+  box.innerHTML="";
+
+  panels
+    .filter(p=>(!objectId||p.objectId===objectId)&&(!q||String(p.panelName||"").toLowerCase().includes(q)))
+    .sort(naturalPanelSort)
+    .forEach(p=>{
+      const sessions=activeForPanel(p.id);
+      let status=p.status||"Nav sākts";
+      if(sessions.some(s=>s.status==="Procesā"))status="Procesā";
+      else if(sessions.some(s=>s.status==="Pauzē"))status="Pauzē";
+
+      const row=document.createElement("div");
+      row.className="admin-production-row";
+      const left=document.createElement("div");
+      left.innerHTML=`<strong>${p.panelName}</strong><small>${by(S.objects,p.objectId)?.name||"—"} · ${by(S.factories,p.factoryId)?.name||"—"}${sessions.length?` · ${sessions.map(s=>s.workerName).join(", ")}`:""}</small>`;
+      const badge=document.createElement("span");
+      badge.className="admin-production-status";
+      if(status==="Procesā")badge.classList.add("running");
+      if(status==="Pauzē")badge.classList.add("paused");
+      if(status==="Pabeigts")badge.classList.add("done");
+      badge.textContent=status;
+      row.append(left,badge);
+      box.appendChild(row);
+    });
+
+  if(!box.children.length){
+    box.innerHTML="<p>Nav paneļu izvēlētajā skatā.</p>";
+  }
+}
+
 function renderLive(){
   fill($("liveFactory"),S.factories,S.role==="admin"?"Visas rūpnīcas":null);
   if(S.role==="worker"&&factoryIdForCurrentWorker())$("liveFactory").value=factoryIdForCurrentWorker();
+  if(S.role==="admin"&&S.adminFactoryScope)$("liveFactory").value=S.adminFactoryScope;
   fill($("liveObject"),S.objects,"Visi objekti");
   const ff=$("liveFactory").value,fo=$("liveObject").value,panels=S.panels.filter(p=>(!ff||p.factoryId===ff)&&(!fo||p.objectId===fo));
   $("liveSummary").innerHTML=`<div><span>Nav sākts</span><strong>${panels.filter(p=>p.status==="Nav sākts").length}</strong></div><div><span>Procesā</span><strong>${panels.filter(p=>p.status==="Procesā").length}</strong></div><div><span>Pauzē</span><strong>${panels.filter(p=>p.status==="Pauzē").length}</strong></div><div><span>Pabeigts</span><strong>${panels.filter(p=>p.status==="Pabeigts").length}</strong></div>`;
@@ -215,6 +293,7 @@ function filteredSessions(){
 function renderReport(){
   fill($("overviewFactory"),S.factories,S.role==="admin"?"Visas rūpnīcas":null);
   if(S.role==="worker"&&factoryIdForCurrentWorker())$("overviewFactory").value=factoryIdForCurrentWorker();
+  if(S.role==="admin"&&S.adminFactoryScope)$("overviewFactory").value=S.adminFactoryScope;
   fill($("overviewObject"),S.objects,"Visi objekti");
   fill($("overviewWorker"),S.workers,"Visi darbinieki");
   const ff=$("overviewFactory").value,fo=$("overviewObject").value,panels=S.panels.filter(p=>(!ff||p.factoryId===ff)&&(!fo||p.objectId===fo)),sessions=filteredSessions();
@@ -231,6 +310,7 @@ function statusLabel(p){
 function renderPanels(){
   fill($("assignFactory"),S.factories,S.role==="admin"?"Visas rūpnīcas":null);
   if(S.role==="worker"&&factoryIdForCurrentWorker())$("assignFactory").value=factoryIdForCurrentWorker();
+  if(S.role==="admin"&&S.adminFactoryScope)$("assignFactory").value=S.adminFactoryScope;
   fill($("assignObject"),S.objects,"Visi objekti");
 
   const ff=$("assignFactory").value;
@@ -397,7 +477,7 @@ async function deletePanel(id){
 function renderWorkers(){
   fill($("newWorkerFactory"),S.factories);
   const box=$("workerManage"),q=$("workerManageSearch").value.trim().toLowerCase();box.innerHTML="";
-  S.workers.filter(w=>!q||w.name.toLowerCase().includes(q)).forEach(w=>{
+  scopedWorkers().filter(w=>!q||w.name.toLowerCase().includes(q)).forEach(w=>{
     const row=document.createElement("div");row.className="manage-row";
     const info=document.createElement("div");info.innerHTML=`<strong>${w.name}</strong><small>${by(S.factories,w.factoryId)?.name||"—"} · ${S.sessions.filter(s=>s.workerId===w.id).length} sesijas</small>`;
     const fs=document.createElement("select");S.factories.forEach(f=>{const o=document.createElement("option");o.value=f.id;o.textContent=f.name;o.selected=f.id===w.factoryId;fs.appendChild(o)});
@@ -415,7 +495,7 @@ async function deleteWorker(id){
 }
 function renderFactories(){
   const box=$("factoryManage");box.innerHTML="";
-  S.factories.forEach(f=>{const wc=S.workers.filter(w=>w.factoryId===f.id).length,pc=S.panels.filter(p=>p.factoryId===f.id).length,row=document.createElement("div");row.className="manage-row";const info=document.createElement("div");info.innerHTML=`<strong>${f.name}</strong><small>${wc} darbinieki · ${pc} paneļi</small>`;const spacer=document.createElement("div");const del=document.createElement("button");del.className="btn danger small";del.textContent="DZĒST";del.onclick=async()=>{if(wc||pc)return alert("Rūpnīca nav tukša.");if(confirm(`Dzēst ${f.name}?`))await deleteDoc(doc(db,"factories",f.id))};row.append(info,spacer,del);box.appendChild(row)});
+  scopedFactories().forEach(f=>{const wc=S.workers.filter(w=>w.factoryId===f.id).length,pc=S.panels.filter(p=>p.factoryId===f.id).length,row=document.createElement("div");row.className="manage-row";const info=document.createElement("div");info.innerHTML=`<strong>${f.name}</strong><small>${wc} darbinieki · ${pc} paneļi</small>`;const spacer=document.createElement("div");const del=document.createElement("button");del.className="btn danger small";del.textContent="DZĒST";del.onclick=async()=>{if(wc||pc)return alert("Rūpnīca nav tukša.");if(confirm(`Dzēst ${f.name}?`))await deleteDoc(doc(db,"factories",f.id))};row.append(info,spacer,del);box.appendChild(row)});
 }
 
 function renderImport(){
@@ -442,7 +522,7 @@ function exportCsv(){
   const csv=[header,...data].map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(";")).join("\n"),blob=new Blob(["\uFEFF"+csv],{type:"text/csv;charset=utf-8"}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download=`PPS_${new Date().toISOString().slice(0,10)}.csv`;a.click();URL.revokeObjectURL(url);
 }
 
-function renderAll(){renderIdentity();renderProduction();renderLive();renderReport();renderPanels();renderWorkers();renderFactories();renderImport();renderDanger()}
+function renderAll(){renderIdentity();renderProduction();renderAdminProduction();renderLive();renderReport();renderPanels();renderWorkers();renderFactories();renderImport();renderDanger()}
 function subscribe(name,key){onSnapshot(collection(db,name),snap=>{S[key]=snap.docs.map(d=>({id:d.id,...d.data()}));$("connectionBadge").textContent="Tiešsaistē";$("connectionBadge").className="badge info";renderAll()},e=>{$("connectionBadge").textContent="Nav savienojuma";$("connectionBadge").className="badge muted";console.error(e)})}
 
 setupNav();
@@ -469,6 +549,8 @@ $("saveIdentityBtn").onclick=()=>{
     localStorage.setItem("pps_role","worker");
     localStorage.setItem("pps_worker_id",S.workerId);
     localStorage.removeItem("pps_admin_name");
+  localStorage.removeItem("pps_admin_factory_scope");
+  S.adminFactoryScope="";
   }else{
     const name=$("adminDisplayName").value.trim()||"Administrators";
     S.role="admin";
@@ -497,6 +579,13 @@ $("changeRoleBtn").onclick=clearCurrentIdentity;
 $("workerObject").onchange=renderProduction;$("workerPanelSearch").oninput=renderProduction;
 $("workerPauseBtn").onclick=async()=>{const s=activeForWorker(S.workerId);if(!s)return;if(s.status==="Procesā"){await updateDoc(doc(db,"sessions",s.id),{status:"Pauzē",accumulatedSeconds:elapsed(s),lastResumeAt:null})}else await updateDoc(doc(db,"sessions",s.id),{status:"Procesā",lastResumeAt:serverTimestamp()})};
 $("workerFinishBtn").onclick=async()=>{const s=activeForWorker(S.workerId);if(!s||!confirm(`Pabeigt savu darbu pie ${s.panelName}?`))return;await updateDoc(doc(db,"sessions",s.id),{status:"Pabeigts",accumulatedSeconds:elapsed(s),lastResumeAt:null,endAt:serverTimestamp()})};
+$("adminFactoryScope").onchange=()=>{
+  S.adminFactoryScope=$("adminFactoryScope").value;
+  localStorage.setItem("pps_admin_factory_scope",S.adminFactoryScope);
+  renderAll();
+};
+$("adminProductionObject").onchange=renderAdminProduction;
+$("adminProductionSearch").oninput=renderAdminProduction;
 ["liveFactory","liveObject"].forEach(id=>$(id).onchange=renderLive);["datePreset","overviewFactory","overviewObject","overviewWorker"].forEach(id=>$(id).onchange=renderReport);$("overviewSearch").oninput=renderReport;$("exportCsvBtn").onclick=exportCsv;
 ["assignFactory","assignObject"].forEach(id=>$(id).onchange=renderPanels);$("assignSearch").oninput=renderPanels;$("workerManageSearch").oninput=renderWorkers;
 $("addFactory").onclick=async()=>{const n=$("newFactory").value.trim();if(n){await addDoc(collection(db,"factories"),{name:n,createdAt:serverTimestamp()});$("newFactory").value=""}};

@@ -1,28 +1,31 @@
-PPS V3.6 — LOMAS
+PPS V4
 
-Lomas:
-1. Darbinieks
-   - izvēlas rūpnīcu un savu vārdu;
-   - redz tikai Ražošanu;
-   - redz tikai savas rūpnīcas paneļus;
-   - Pārvaldība nav pieejama.
+LOMAS
+Darbinieks:
+- redz tikai Ražošanu;
+- redz tikai savas rūpnīcas paneļus.
 
-2. Administrators
-   - ievada savu nosaukumu;
-   - redz tikai Pārvaldību;
-   - redz visas rūpnīcas;
-   - var pārvaldīt paneļus, darbiniekus, rūpnīcas, importu un pārskatus.
+Administrators:
+- redz Ražošanu un Pārvaldību;
+- augšā ir viens kopīgs rūpnīcas filtrs;
+- filtrs ietekmē Ražošanas pārskatu, aktīvos darbus, paneļus, darbiniekus un pārskatus;
+- var izvēlēties “Visas rūpnīcas”.
 
-Loma tiek saglabāta konkrētajā ierīcē.
-Mainīt lietotāju var ar pogu “Mainīt” vai “Mainīt lietotāju”.
+ADMINISTRATORA RAŽOŠANAS SKATS
+- ir pārskata režīms;
+- rāda paneļa numuru, objektu, rūpnīcu, statusu un aktīvos darbiniekus;
+- var filtrēt pēc objekta un meklēt paneli.
 
-SVARĪGI
-Šī versija ievieš lietotāja interfeisa lomas, bet vēl ne Firebase Authentication.
-Pilnai drošībai nākamajā posmā būs jāievieš Firebase Auth un Firestore noteikumi.
+PWA
+- pievienots manifest.json;
+- aplikāciju var pievienot telefona sākuma ekrānam.
 
-GitHub aizvieto:
+GitHub aizvieto/pievieno:
 - index.html
 - styles.css
 - app.js
 - cache-reset.js
 - service-worker.js
+- manifest.json
+
+Pēc Commit aizver visas PPS cilnes un atver aplikāciju no jauna.
