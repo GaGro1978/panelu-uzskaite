@@ -1,22 +1,13 @@
-PPS V4.4
+PPS V4.5 — KOMPAKTA ADMINISTRATORA PABEIGŠANAS POGA
 
-JAUNUMI
+Izmaiņas administratora Ražošanas skatā:
+- lielā poga PANELIS PABEIGTS aizstāta ar mazu pogu ✔ Pabeigt;
+- poga atrodas vienā līnijā ar paneļa numuru;
+- statuss paliek labajā pusē;
+- rindas kļuvušas kompaktākas;
+- telefonā poga vairs neaizņem visu rindas platumu.
 
-1. Administrators var pabeigt paneli
-- Atver Ražošanu administratora režīmā.
-- Pie nepabeigta paneļa nospied PANELIS PABEIGTS.
-- Ja pie paneļa vēl ir aktīvi darbinieki, sistēma parāda viņu vārdus.
-- Pēc administratora apstiprinājuma aktīvās sesijas tiek pabeigtas un panelis iegūst statusu Pabeigts.
-
-2. Eksports uz Excel
-- Pārskatā poga tagad ir EKSPORTĒT EXCEL.
-- Tiek izveidots īsts .xlsx fails.
-- Excel failā ir divas lapas:
-  Darba sesijas
-  Paneļi
-- Abām lapām ir filtri un sakārtoti kolonnu platumi.
-
-GITHUB AIZVIETO
+GitHub aizvieto:
 - index.html
 - styles.css
 - app.js

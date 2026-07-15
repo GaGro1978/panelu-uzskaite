@@ -858,3 +858,68 @@ body.role-admin [data-main-view="adminView"]{
     font-size:12px;
   }
 }
+
+/* PPS V4.5 — maza poga vienā līnijā ar paneļa numuru */
+.admin-production-row{
+  grid-template-columns:minmax(0,1fr) auto;
+  gap:8px;
+  min-height:54px;
+}
+
+.admin-production-main{
+  min-width:0;
+}
+
+.admin-production-topline{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  min-width:0;
+}
+
+.admin-production-topline strong{
+  font-size:18px;
+  line-height:1.05;
+  white-space:nowrap;
+}
+
+.admin-production-main small{
+  display:block;
+  margin-top:4px;
+  font-size:12px;
+  color:var(--muted);
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+
+.admin-finish-panel.compact{
+  flex:0 0 auto;
+  padding:5px 8px;
+  border-radius:7px;
+  font-size:10px;
+  line-height:1;
+  min-height:24px;
+  white-space:nowrap;
+}
+
+@media(max-width:620px){
+  .admin-production-row{
+    grid-template-columns:minmax(0,1fr) auto;
+  }
+
+  .admin-finish-panel.compact{
+    width:auto;
+    grid-column:auto;
+    padding:5px 7px;
+    font-size:10px;
+  }
+
+  .admin-production-topline strong{
+    font-size:17px;
+  }
+
+  .admin-production-main small{
+    font-size:11px;
+  }
+}

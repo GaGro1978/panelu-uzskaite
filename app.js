@@ -321,24 +321,38 @@ function renderAdminProduction(){
 
       const row=document.createElement("div");
       row.className="admin-production-row";
+
       const left=document.createElement("div");
-      left.innerHTML=`<strong>${p.panelName}</strong><small>${by(S.objects,p.objectId)?.name||"—"} · ${by(S.factories,p.factoryId)?.name||"—"}${sessions.length?` · ${sessions.map(s=>s.workerName).join(", ")}`:""}${p.completedByWorkerName?` · pabeidza: ${p.completedByWorkerName}`:""}</small>`;
+      left.className="admin-production-main";
+
+      const top=document.createElement("div");
+      top.className="admin-production-topline";
+
+      const panelNo=document.createElement("strong");
+      panelNo.textContent=p.panelName;
+      top.appendChild(panelNo);
+
+      if(p.status!=="Pabeigts"){
+        const finishButton=document.createElement("button");
+        finishButton.className="admin-finish-panel compact";
+        finishButton.textContent="✔ Pabeigt";
+        finishButton.onclick=()=>adminFinishPanel(p.id);
+        top.appendChild(finishButton);
+      }
+
+      const meta=document.createElement("small");
+      meta.textContent=`${by(S.objects,p.objectId)?.name||"—"} · ${by(S.factories,p.factoryId)?.name||"—"}${sessions.length?` · ${sessions.map(s=>s.workerName).join(", ")}`:""}${p.completedByWorkerName?` · pabeidza: ${p.completedByWorkerName}`:""}`;
+
+      left.append(top,meta);
+
       const badge=document.createElement("span");
       badge.className="admin-production-status";
       if(status==="Procesā")badge.classList.add("running");
       if(status==="Pauzē")badge.classList.add("paused");
       if(status==="Pabeigts")badge.classList.add("done");
       badge.textContent=status;
+
       row.append(left,badge);
-
-      if(p.status!=="Pabeigts"){
-        const finishButton=document.createElement("button");
-        finishButton.className="admin-finish-panel";
-        finishButton.textContent="PANELIS PABEIGTS";
-        finishButton.onclick=()=>adminFinishPanel(p.id);
-        row.appendChild(finishButton);
-      }
-
       box.appendChild(row);
     });
 
