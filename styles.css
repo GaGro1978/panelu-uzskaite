@@ -773,3 +773,14 @@ body.role-admin #productionView{
     max-width:150px;
   }
 }
+
+/* PPS V4.1 — administrators redz abas galvenās sadaļas */
+body.role-admin [data-main-view="productionView"]{
+  display:block!important;
+}
+body.role-admin [data-main-view="adminView"]{
+  display:block!important;
+}
+body.role-admin .main-nav{
+  grid-template-columns:1fr 1fr!important;
+}

@@ -27,30 +27,38 @@ let selectedLoginRole=S.role||"worker";
 
 function applyRoleUi(){
   document.body.classList.remove("role-worker","role-admin");
-  if(S.role==="worker")document.body.classList.add("role-worker");
-  if(S.role==="admin")document.body.classList.add("role-admin");
 
   const workerTab=document.querySelector('[data-main-view="productionView"]');
   const adminTab=document.querySelector('[data-main-view="adminView"]');
 
   if(S.role==="worker"){
+    document.body.classList.add("role-worker");
     workerTab?.classList.add("active");
     adminTab?.classList.remove("active");
     $("productionView")?.classList.remove("hidden");
     $("adminView")?.classList.add("hidden");
+    $("adminFactoryScopeWrap")?.classList.add("hidden");
   }else if(S.role==="admin"){
-    if(!adminTab?.classList.contains("active")&&!workerTab?.classList.contains("active")){
-      adminTab?.classList.add("active");
-    }
+    document.body.classList.add("role-admin");
     $("adminFactoryScopeWrap")?.classList.remove("hidden");
+
+    // Ja neviena cilne nav aktīva, atver Ražošanu.
+    if(!workerTab?.classList.contains("active")&&!adminTab?.classList.contains("active")){
+      workerTab?.classList.add("active");
+    }
+
     if(adminTab?.classList.contains("active")){
       $("adminView")?.classList.remove("hidden");
       $("productionView")?.classList.add("hidden");
     }else{
+      workerTab?.classList.add("active");
+      adminTab?.classList.remove("active");
       $("productionView")?.classList.remove("hidden");
       $("adminView")?.classList.add("hidden");
     }
   }else{
+    $("productionView")?.classList.remove("hidden");
+    $("adminView")?.classList.add("hidden");
     $("adminFactoryScopeWrap")?.classList.add("hidden");
   }
 }
@@ -115,15 +123,19 @@ function mapRow(row,defaultFactoryName){
 function setupNav(){
   document.querySelectorAll(".main-tab").forEach(b=>b.onclick=()=>{
     if(S.role==="worker"&&b.dataset.mainView==="adminView")return;
-    
+
     document.querySelectorAll(".main-tab").forEach(x=>x.classList.remove("active"));
     document.querySelectorAll(".main-view").forEach(x=>x.classList.add("hidden"));
-    b.classList.add("active");$(b.dataset.mainView).classList.remove("hidden");
+
+    b.classList.add("active");
+    $(b.dataset.mainView)?.classList.remove("hidden");
   });
+
   document.querySelectorAll(".admin-tab").forEach(b=>b.onclick=()=>{
     document.querySelectorAll(".admin-tab").forEach(x=>x.classList.remove("active"));
     document.querySelectorAll(".admin-panel").forEach(x=>x.classList.add("hidden"));
-    b.classList.add("active");$(b.dataset.adminView).classList.remove("hidden");
+    b.classList.add("active");
+    $(b.dataset.adminView)?.classList.remove("hidden");
   });
 }
 

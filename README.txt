@@ -1,26 +1,13 @@
-PPS V4
+PPS V4.1 — ADMINISTRATORAM REDZAMA RAŽOŠANA
 
-LOMAS
-Darbinieks:
-- redz tikai Ražošanu;
-- redz tikai savas rūpnīcas paneļus.
+Labojums:
+- administrators redz abas galvenās cilnes:
+  Ražošana un Pārvaldība;
+- administrators var brīvi pārslēgties starp abām sadaļām;
+- darbinieks joprojām redz tikai Ražošanu;
+- administratora rūpnīcas filtrs paliek pieejams augšā.
 
-Administrators:
-- redz Ražošanu un Pārvaldību;
-- augšā ir viens kopīgs rūpnīcas filtrs;
-- filtrs ietekmē Ražošanas pārskatu, aktīvos darbus, paneļus, darbiniekus un pārskatus;
-- var izvēlēties “Visas rūpnīcas”.
-
-ADMINISTRATORA RAŽOŠANAS SKATS
-- ir pārskata režīms;
-- rāda paneļa numuru, objektu, rūpnīcu, statusu un aktīvos darbiniekus;
-- var filtrēt pēc objekta un meklēt paneli.
-
-PWA
-- pievienots manifest.json;
-- aplikāciju var pievienot telefona sākuma ekrānam.
-
-GitHub aizvieto/pievieno:
+GitHub aizvieto:
 - index.html
 - styles.css
 - app.js
