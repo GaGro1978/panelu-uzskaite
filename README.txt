@@ -1,13 +1,13 @@
-PPS V2.5 — KOMPAKTĀKS RAŽOŠANAS SKATS TELEFONAM
+PPS V2.6 — PANEĻA VADĪKLAS VIENĀ RINDĀ
 
-Labojumi:
-- paneļa numurs un SĀKT poga vienā rindā;
-- nav lielas tukšas atstarpes starp paneļa numuru un pogu;
-- paneļa numurs ir lielāks un labāk salasāms;
-- SĀKT poga ir liela, bet neaizņem visu kartīti;
-- paneļu kartītes ir zemākas;
-- samazinātas atstarpes starp kartītēm;
-- Ražošanas saturs telefonā ir šaurāks un kompaktāks.
+Labojums Pārvaldība > Paneļi:
+- “Izvēlēties pārcelšanai”;
+- darbinieku ķeksīši;
+- rūpnīcas izvēle;
+
+tagad atrodas vienā horizontālā rindā.
+
+Telefonā rinda ir horizontāli ritināma, lai kartīte nekļūtu ļoti augsta.
 
 GitHub aizvieto:
 - index.html
@@ -16,4 +16,4 @@ GitHub aizvieto:
 - cache-reset.js
 - service-worker.js
 
-Pēc Commit aizver visas PPS cilnes, atver aplikāciju no jauna un nospied Ctrl+Shift+R.
+Pēc Commit aizver visas PPS cilnes, atver no jauna un nospied Ctrl+Shift+R.

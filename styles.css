@@ -517,3 +517,98 @@ tr:last-child td{border-bottom:0}
     font-size:13px;
   }
 }
+
+/* PPS V2.6 — paneļa pārvaldības vadīklas vienā rindā */
+#assignList .assignItem{
+  display:grid;
+  grid-template-columns:minmax(150px,1fr) auto;
+  grid-template-areas:
+    "head badge"
+    "controls controls";
+  gap:8px 12px;
+}
+
+#assignList .assignHead{
+  grid-area:head;
+  min-width:0;
+}
+
+#assignList .assignHead + .panelTools{
+  grid-area:controls;
+}
+
+#assignList .assignHead .badge{
+  grid-area:badge;
+}
+
+#assignList .panelTools{
+  display:flex !important;
+  align-items:center;
+  gap:8px;
+  margin-top:0;
+  min-width:0;
+  overflow-x:auto;
+  overflow-y:hidden;
+  padding-bottom:2px;
+  scrollbar-width:thin;
+}
+
+#assignList .transferLabel{
+  flex:0 0 auto;
+  white-space:nowrap;
+  margin:0;
+}
+
+#assignList .panelTools > select{
+  flex:0 0 190px;
+  min-width:190px;
+  margin:0;
+}
+
+#assignList .checks{
+  display:flex !important;
+  flex:0 0 auto;
+  flex-wrap:nowrap !important;
+  gap:5px;
+  margin:0 !important;
+  padding:0;
+  overflow:visible;
+}
+
+#assignList .check{
+  flex:0 0 auto;
+  white-space:nowrap;
+  margin:0;
+}
+
+@media(max-width:700px){
+  #assignList .assignItem{
+    grid-template-columns:minmax(0,1fr) auto;
+    gap:6px 8px;
+    padding:8px;
+  }
+
+  #assignList .panelTools{
+    gap:6px;
+    margin-left:-2px;
+    margin-right:-2px;
+    padding:2px 2px 5px;
+  }
+
+  #assignList .transferLabel{
+    padding:7px 8px;
+    font-size:10px;
+  }
+
+  #assignList .panelTools > select{
+    flex-basis:155px;
+    min-width:155px;
+    padding:7px 8px;
+    font-size:11px;
+  }
+
+  #assignList .check{
+    padding:6px 7px;
+    font-size:10px;
+  }
+}
