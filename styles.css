@@ -20,3 +20,16 @@ nav{display:flex;gap:6px;max-width:1200px;margin:auto;padding:10px;overflow:auto
   .bulkTransfer{grid-template-columns:1fr}
   .panelTools{grid-template-columns:1fr}
 }
+
+.adminSection{margin-top:18px;padding-top:14px;border-top:2px solid #e5e7eb}
+.adminSection:first-of-type{margin-top:8px}
+.adminSectionTitle{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:8px}
+.adminSectionTitle h3{margin:0;font-size:18px}
+.manageRow{border:1px solid #d1d5db;background:#fff}
+.manageButtons .softDanger,.adminActions .softDanger{
+  background:#dc2626;color:#fff;font-weight:900;border:2px solid #991b1b
+}
+.manageButtons .softDanger:hover,.adminActions .softDanger:hover{background:#b91c1c}
+.panelTools select{border:2px solid #93c5fd}
+.bulkTransfer{background:#eff6ff;border:1px solid #93c5fd;padding:10px;border-radius:10px}
+#transferSelected{background:#1d4ed8;color:#fff}

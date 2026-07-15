@@ -1,27 +1,38 @@
-PPS V1.1 — DATU PĀRVALDĪBA UN RŪPNĪCU MAIŅA
+PPS V2
 
-JAUNUMI
-- dzēst darbinieku;
-- pārcelt darbinieku uz citu rūpnīcu;
-- dzēst tukšu rūpnīcu;
-- pārcelt vienu paneli uz citu rūpnīcu;
-- izvēlēties vairākus paneļus un pārcelt tos masveidā;
-- dzēst paneli kopā ar tā darba sesiju vēsturi;
-- pārcelšanas laikā automātiski noņem vecās rūpnīcas darbinieku piešķīrumus.
+KUR DZĒST DARBINIEKU
+1. Atver cilni Pārvaldība.
+2. Atrodi sadaļu Datu pārvaldība.
+3. Zem Darbinieki atrodi vajadzīgo cilvēku.
+4. Nospied sarkano pogu DZĒST DARBINIEKU.
+
+KUR DZĒST RŪPNĪCU
+1. Atver Pārvaldība > Datu pārvaldība > Rūpnīcas.
+2. Nospied DZĒST RŪPNĪCU.
+3. Rūpnīcu var dzēst tikai tad, kad tai nav piesaistītu darbinieku un paneļu.
+
+KĀ PĀRCELT PANELI UZ CITU RŪPNĪCU
+1. Atver Pārvaldība > Paneļu piešķiršana un pārcelšana.
+2. Pie konkrētā paneļa izvēlies rūpnīcu sarakstā.
+3. Apstiprini pārcelšanu.
+4. Var arī atzīmēt vairākus paneļus ar ķeksīšiem un izmantot PĀRCELT IZVĒLĒTOS.
 
 DROŠĪBA
+- aktīvu paneli nevar dzēst vai pārcelt;
 - aktīvu darbinieku nevar dzēst vai pārcelt;
-- aktīvu paneli nevar pārcelt vai dzēst;
-- rūpnīcu nevar dzēst, kamēr tai ir darbinieki vai paneļi;
-- darbinieka dzēšana neizdzēš vēsturiskās darba sesijas;
-- paneļa dzēšana ir neatgriezeniska un izdzēš arī tā sesijas.
+- darbinieka vecā darba vēsture paliek pārskatos;
+- pārvietojot paneli, vecās rūpnīcas darbinieku piešķīrumi tiek noņemti;
+- paneļa dzēšana dzēš arī tā darba sesiju vēsturi.
 
 GITHUB
-Aizvieto/ielādē:
+Aizvieto:
 - index.html
 - styles.css
 - app.js
 - cache-reset.js
 - service-worker.js
 
-Pēc Commit aizver visas PPS cilnes un atver aplikāciju no jauna.
+Pēc Commit:
+- aizver visas PPS cilnes;
+- atver aplikāciju no jauna;
+- nospied Ctrl+Shift+R.

@@ -85,7 +85,7 @@ function renderDataManagement(){
       info.innerHTML=`<strong>${f.name}</strong><small>${wc} darbinieki · ${pc} paneļi</small>`;
       const spacer=document.createElement("div");
       const buttons=document.createElement("div");buttons.className="manageButtons";
-      const del=document.createElement("button");del.className="softDanger";del.textContent="DZĒST";del.onclick=()=>deleteFactory(f.id);
+      const del=document.createElement("button");del.className="softDanger";del.textContent="DZĒST RŪPNĪCU";del.onclick=()=>deleteFactory(f.id);
       buttons.appendChild(del);row.append(info,spacer,buttons);factoryBox.appendChild(row);
     });
   }
@@ -117,7 +117,7 @@ function renderDataManagement(){
         await updateDoc(doc(db,"workers",w.id),{factoryId:newFactory});
       };
       const buttons=document.createElement("div");buttons.className="manageButtons";
-      const del=document.createElement("button");del.className="softDanger";del.textContent="DZĒST";del.onclick=()=>deleteWorker(w.id);
+      const del=document.createElement("button");del.className="softDanger";del.textContent="DZĒST DARBINIEKU";del.onclick=()=>deleteWorker(w.id);
       buttons.appendChild(del);row.append(info,factorySelect,buttons);workerBox.appendChild(row);
     });
   }
@@ -174,7 +174,7 @@ function renderAssignments(){
       b.onclick=async()=>{if(confirm(`Atvērt ${p.panelName} no jauna?`))await updateDoc(doc(db,"panels",p.id),{status:"Nav sākts",completedAt:null})};
       acts.appendChild(b);
     }
-    const del=document.createElement("button");del.className="softDanger";del.textContent="DZĒST PANELI";del.disabled=a.length>0;del.onclick=()=>deletePanelWithSessions(p.id);
+    const del=document.createElement("button");del.className="softDanger";del.textContent="DZĒST PANELI UN VĒSTURI";del.disabled=a.length>0;del.onclick=()=>deletePanelWithSessions(p.id);
     acts.appendChild(del);item.appendChild(acts);ad.appendChild(item);
   });
 }
