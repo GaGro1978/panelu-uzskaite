@@ -13,6 +13,7 @@ const firebaseConfig={
   appId:"1:431301329254:web:bd3940bfff0c41d4e508a7"
 };
 const app=initializeApp(firebaseConfig),db=getFirestore(app),$=id=>document.getElementById(id);
+const ADMIN_PIN="2580"; // Nomaini šo vērtību, ja vajag citu administratora PIN
 const S={factories:[],workers:[],objects:[],panels:[],sessions:[],preview:[],workerId:localStorage.getItem("pps_worker_id")||null,role:localStorage.getItem("pps_role")||null,adminName:localStorage.getItem("pps_admin_name")||"",adminFactoryScope:localStorage.getItem("pps_admin_factory_scope")||""};
 
 const by=(list,id)=>list.find(x=>x.id===id);
@@ -705,6 +706,22 @@ $("chooseAdminRole").onclick=()=>{
   renderIdentity();
 };
 
+$("adminPin").addEventListener("input",()=>{
+  $("adminPin").value=$("adminPin").value.replace(/\D/g,"").slice(0,4);
+  const message=$("adminPinMessage");
+  if(message){
+    message.textContent="";
+    message.classList.add("hidden");
+  }
+});
+
+$("adminPin").addEventListener("keydown",event=>{
+  if(event.key==="Enter"){
+    $("saveIdentityBtn").click();
+  }
+});
+
+
 $("saveIdentityBtn").onclick=()=>{
   if(selectedLoginRole==="worker"){
     if(!$("identityWorker").value)return alert("Izvēlies darbinieku.");
@@ -717,6 +734,24 @@ $("saveIdentityBtn").onclick=()=>{
   localStorage.removeItem("pps_admin_factory_scope");
   S.adminFactoryScope="";
   }else{
+    const pin=$("adminPin").value.trim();
+    const pinMessage=$("adminPinMessage");
+
+    if(pin!==ADMIN_PIN){
+      if(pinMessage){
+        pinMessage.textContent="Nepareizs administratora PIN.";
+        pinMessage.classList.remove("hidden");
+      }
+      $("adminPin").value="";
+      $("adminPin").focus();
+      return;
+    }
+
+    if(pinMessage){
+      pinMessage.textContent="";
+      pinMessage.classList.add("hidden");
+    }
+
     const name=$("adminDisplayName").value.trim()||"Administrators";
     S.role="admin";
     S.adminName=name;
@@ -724,6 +759,7 @@ $("saveIdentityBtn").onclick=()=>{
     localStorage.setItem("pps_role","admin");
     localStorage.setItem("pps_admin_name",name);
     localStorage.removeItem("pps_worker_id");
+    $("adminPin").value="";
   }
   renderAll();
 };

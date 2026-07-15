@@ -1,11 +1,21 @@
-PPS V4.5 — KOMPAKTA ADMINISTRATORA PABEIGŠANAS POGA
+PPS V4.6 — ADMINISTRATORA PIN
 
-Izmaiņas administratora Ražošanas skatā:
-- lielā poga PANELIS PABEIGTS aizstāta ar mazu pogu ✔ Pabeigt;
-- poga atrodas vienā līnijā ar paneļa numuru;
-- statuss paliek labajā pusē;
-- rindas kļuvušas kompaktākas;
-- telefonā poga vairs neaizņem visu rindas platumu.
+Administratora PIN pēc noklusējuma:
+2580
+
+Darbība:
+- darbinieka režīmam PIN nav vajadzīgs;
+- izvēloties Administrators, jāievada 4 ciparu PIN;
+- nepareiza PIN gadījumā administratora režīms netiek atvērts;
+- pēc veiksmīgas pieteikšanās administrators paliek ielogots šajā ierīcē;
+- lai izietu, nospied Mainīt lietotāju.
+
+KĀ NOMAINĪT PIN
+Atver app.js un pašā sākumā atrodi:
+
+const ADMIN_PIN="2580";
+
+Nomaini 2580 uz savu 4 ciparu PIN.
 
 GitHub aizvieto:
 - index.html
@@ -14,5 +24,3 @@ GitHub aizvieto:
 - cache-reset.js
 - service-worker.js
 - manifest.json
-
-Pēc Commit aizver visas PPS cilnes un atver aplikāciju no jauna.

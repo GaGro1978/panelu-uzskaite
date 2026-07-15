@@ -923,3 +923,20 @@ body.role-admin [data-main-view="adminView"]{
     font-size:11px;
   }
 }
+
+/* PPS V4.6 — administratora PIN */
+#adminPin{
+  text-align:center;
+  letter-spacing:.35em;
+  font-size:22px;
+  font-weight:900;
+}
+.pin-message{
+  margin-top:8px;
+  padding:9px 10px;
+  border-radius:9px;
+  background:#fee2e2;
+  color:#991b1b;
+  font-size:13px;
+  font-weight:800;
+}
