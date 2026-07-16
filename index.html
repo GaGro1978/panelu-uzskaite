@@ -4,14 +4,14 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#111827">
-  <title>PPS V5.0</title>
+  <title>PPS V5.4</title>
   <link rel="manifest" href="manifest.json">
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
 <header class="app-header">
   <div>
-    <h1>PPS V5.0</h1>
+    <h1>PPS V5.4</h1>
     <p>Paneļu ražošanas uzskaite</p>
   </div>
   <div class="header-tools">
@@ -137,7 +137,7 @@
         <button class="admin-tab" data-admin-view="workersPanel">Darbinieki</button>
         <button class="admin-tab" data-admin-view="factoriesPanel">Rūpnīcas</button>
         <button class="admin-tab" data-admin-view="projectsPanel">Projekti</button>
-<button class="admin-tab" data-admin-view="importPanel">Imports</button>
+        <button class="admin-tab" data-admin-view="importPanel">Imports</button>
       </nav>
 
       <section id="livePanel" class="admin-panel">
@@ -271,12 +271,19 @@
         </div>
       </section>
 
+      
       <section id="projectsPanel" class="admin-panel hidden">
-<div class="panel-header"><div><h3>Projekti</h3><p>Projektu pārvaldība</p></div></div>
-<div id="projectList"></div>
-</section>
+        <div class="panel-header">
+          <div>
+            <h3>Projekti</h3>
+            <p>Ofisa darbinieks var dzēst projektu kopā ar tā paneļiem un darba sesijām.</p>
+          </div>
+          <input id="projectSearch" placeholder="Meklēt projektu">
+        </div>
+        <div id="projectList" class="project-list"></div>
+      </section>
 
-<section id="importPanel" class="admin-panel hidden">
+      <section id="importPanel" class="admin-panel hidden">
         <div class="panel-header">
           <div>
             <h3>Imports</h3>
@@ -328,6 +335,6 @@
 
 <script src="cache-reset.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script type="module" src="app.js?v=4.8"></script>
+<script type="module" src="app.js?v=5.4"></script>
 </body>
 </html>

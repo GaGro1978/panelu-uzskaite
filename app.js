@@ -38,8 +38,15 @@ const fmt=v=>{const d=toDate(v);return d?new Intl.DateTimeFormat("lv-LV",{day:"2
 const hms=s=>{s=Math.max(0,Math.floor(s||0));return [Math.floor(s/3600),Math.floor((s%3600)/60),s%60].map(v=>String(v).padStart(2,"0")).join(":")};
 const elapsed=s=>{let t=s?.accumulatedSeconds||0;if(s?.status==="Procesā"&&s.lastResumeAt){const d=toDate(s.lastResumeAt);if(d)t+=(Date.now()-d.getTime())/1000}return t};
 const currentWorker=()=>by(S.workers,S.workerId);
-const activeForWorker=id=>S.sessions.find(s=>s.workerId===id&&(s.status==="Procesā"||s.status==="Pauzē")&&s.status!=="Pabeigts");
-const activeForPanel=id=>S.sessions.filter(s=>s.panelId===id&&(s.status==="Procesā"||s.status==="Pauzē")&&s.status!=="Pabeigts");
+const isActiveSession=s=>s&&(s.status==="Procesā"||s.status==="Pauzē");
+const sessionTime=s=>toDate(s?.startAt)?.getTime()||toDate(s?.createdAt)?.getTime()||0;
+const activeSessionsForWorker=id=>S.sessions
+  .filter(s=>s.workerId===id&&isActiveSession(s))
+  .sort((a,b)=>sessionTime(b)-sessionTime(a));
+const activeForWorker=id=>activeSessionsForWorker(id)[0]||null;
+const activeForPanel=id=>S.sessions
+  .filter(s=>s.panelId===id&&isActiveSession(s))
+  .sort((a,b)=>sessionTime(b)-sessionTime(a));
 
 function applyRoleUi(){
   document.body.classList.remove("role-worker","role-admin","role-manager");
@@ -207,36 +214,6 @@ function selectedLoginUser(){
   return buildLoginUsers().find(user=>user.id===value);
 }
 
-
-async function deleteProjectV49(projectId){
-  if(S.role!=="admin"){
-    alert("Projektus var dzēst tikai ofisa darbinieki.");
-    return;
-  }
-
-  const project=by(S.objects,projectId);
-  if(!project)return;
-
-  const panels=S.panels.filter(p=>p.objectId===projectId);
-
-  if(!confirm(`Dzēst projektu "${project.name}"?\nTiks dzēsti arī ${panels.length} paneļi.`))
-    return;
-
-  try{
-    const batch=writeBatch(db);
-    panels.forEach(panel=>{
-      batch.delete(doc(db,"panels",panel.id));
-    });
-    batch.delete(doc(db,"objects",projectId));
-    await batch.commit();
-    await loadData();
-    renderAll();
-  }catch(e){
-    console.error(e);
-    alert("Neizdevās dzēst projektu: "+e.message);
-  }
-}
-
 function renderLoginUserInfo(){
   const user=selectedLoginUser();
   const info=$("loginUserInfo");
@@ -331,7 +308,7 @@ function renderProduction(){
     $("workerActivePanel").textContent=active.panelName;$("workerActiveObject").textContent=by(S.objects,active.objectId)?.name||"";
     $("workerTimer").textContent=hms(elapsed(active));$("workerPauseBtn").textContent=active.status==="Pauzē"?"TURPINĀT":"PAUZE";
     const others=activeForPanel(active.panelId).filter(s=>s.workerId!==w.id);
-    $("otherWorkersActive").textContent=others.length?`Pie paneļa vēl strādā: ${others.map(s=>s.workerName).join(", ")}`:"";
+    $("otherWorkersActive").textContent=others.length?`Pie paneļa vēl strādā: ${[...new Set(others.map(s=>s.workerName))].join(", ")}`:"";
     return;
   }
   const objectId=$("workerObject").value,q=$("workerPanelSearch").value.trim().toLowerCase(),box=$("workerPanelList");box.innerHTML="";
@@ -344,23 +321,9 @@ function renderProduction(){
   panels.forEach(p=>{
     const activeSessions=activeForPanel(p.id),row=document.createElement("div");row.className="production-row";
     const left=document.createElement("div");
-    left.innerHTML=`<strong>${p.panelName}</strong><small>${by(S.objects,p.objectId)?.name||"—"} · ${activeSessions.length?`strādā: ${activeSessions.map(s=>s.workerName).join(", ")}`:"brīvs"}</small>`;
+    left.innerHTML=`<strong>${p.panelName}</strong><small>${by(S.objects,p.objectId)?.name||"—"} · ${activeSessions.length?`strādā: ${[...new Set(activeSessions.map(s=>s.workerName))].join(", ")}`:"brīvs"}</small>`;
     const btn=document.createElement("button");btn.className="btn primary";btn.textContent=activeSessions.length?"PIEVIENOTIES":"SĀKT";btn.onclick=()=>startSession(p.id);
-    row.append(left,btn);if(S.role==="admin"){
- const del=document.createElement("button");
- del.className="project-delete-btn";
- del.textContent="Dzēst";
- del.onclick=()=>deleteProject(project.id);
- row.appendChild(del);
-}
-if(S.role==="admin" && project){
-        const del=document.createElement("button");
-        del.className="project-delete-btn";
-        del.textContent="🗑 Dzēst";
-        del.onclick=()=>deleteProjectV49(project.id);
-        row.appendChild(del);
-      }
-      box.appendChild(row);
+    row.append(left,btn);box.appendChild(row);
   });
   if(!panels.length)box.innerHTML='<p>Nav pieejamu paneļu.</p>';
 }
@@ -369,7 +332,7 @@ async function startSession(panelId){
   const w=currentWorker(),p=by(S.panels,panelId);if(!w||!p)return;
   if(activeForWorker(w.id))return alert("Tev jau ir aktīvs darbs.");
   const others=activeForPanel(panelId);
-  if(others.length&&!confirm(`Pie paneļa jau strādā ${others.map(s=>s.workerName).join(", ")}. Pievienoties?`))return;
+  if(others.length&&!confirm(`Pie paneļa jau strādā ${[...new Set(others.map(s=>s.workerName))].join(", ")}. Pievienoties?`))return;
   await runTransaction(db,async tx=>{
     const pr=doc(db,"panels",panelId),snap=await tx.get(pr),data=snap.data();
     if(data.status==="Pabeigts")throw new Error("Panelis jau pabeigts.");
@@ -421,9 +384,21 @@ async function adminFinishPanel(panelId){
       status:"Pabeigts",
       completedAt:serverTimestamp(),
       completedByWorkerId:null,
-      completedByWorkerName:S.adminName||"Administrators",
+      completedByWorkerName:S.loginName||S.adminName||"Administrators",
       completedByAdmin:true
     });
+
+    const activeIds=new Set(activeSessions.map(session=>session.id));
+    S.sessions.forEach(session=>{
+      if(activeIds.has(session.id)){
+        session.status="Pabeigts";
+        session.lastResumeAt=null;
+        session.endAt=new Date();
+      }
+    });
+    panel.status="Pabeigts";
+    panel.completedByWorkerName=S.loginName||S.adminName||"Administrators";
+    renderAll();
   }catch(error){
     console.error(error);
     alert("Neizdevās pabeigt paneli: "+error.message);
@@ -475,7 +450,7 @@ function renderAdminProduction(){
       }
 
       const meta=document.createElement("small");
-      meta.textContent=`${by(S.objects,p.objectId)?.name||"—"} · ${by(S.factories,p.factoryId)?.name||"—"}${sessions.length?` · ${sessions.map(s=>s.workerName).join(", ")}`:""}${p.completedByWorkerName?` · pabeidza: ${p.completedByWorkerName}`:""}`;
+      meta.textContent=`${by(S.objects,p.objectId)?.name||"—"} · ${by(S.factories,p.factoryId)?.name||"—"}${sessions.length?` · ${[...new Set(sessions.map(s=>s.workerName))].join(", ")}`:""}${p.completedByWorkerName?` · pabeidza: ${p.completedByWorkerName}`:""}`;
 
       left.append(top,meta);
 
@@ -745,55 +720,102 @@ async function deleteProject(projectId){
   const project=by(S.objects,projectId);
   if(!project)return;
 
-  const panels=S.panels.filter(p=>p.objectId===projectId);
+  const panels=S.panels.filter(panel=>panel.objectId===projectId);
+  const panelIds=new Set(panels.map(panel=>panel.id));
+  const sessions=S.sessions.filter(session=>panelIds.has(session.panelId));
+  const active=sessions.filter(isActiveSession);
 
-  if(!confirm(`Dzēst projektu "${project.name}"?\n\nTiks dzēsti arī ${panels.length} paneļi.`)){
+  if(active.length){
+    const names=[...new Set(active.map(session=>session.workerName))];
+    alert(
+      `Projektu nevar dzēst, kamēr tajā ir aktīvi darbi.\n\n` +
+      names.map(name=>"• "+name).join("\n")
+    );
     return;
   }
 
-  try{
-    const batch=writeBatch(db);
+  if(!confirm(
+    `Dzēst projektu "${project.name}"?\n\n` +
+    `Tiks neatgriezeniski dzēsti:\n` +
+    `• ${panels.length} paneļi\n` +
+    `• ${sessions.length} darba sesijas`
+  ))return;
 
-    panels.forEach(panel=>{
-      batch.delete(doc(db,"panels",panel.id));
+  try{
+    for(let i=0;i<sessions.length;i+=450){
+      const batch=writeBatch(db);
+      sessions.slice(i,i+450).forEach(session=>{
+        batch.delete(doc(db,"sessions",session.id));
+      });
+      await batch.commit();
+    }
+
+    for(let i=0;i<panels.length;i+=450){
+      const batch=writeBatch(db);
+      panels.slice(i,i+450).forEach(panel=>{
+        batch.delete(doc(db,"panels",panel.id));
+      });
+      await batch.commit();
+    }
+
+    await deleteDoc(doc(db,"objects",projectId));
+
+    S.sessions=S.sessions.filter(session=>!panelIds.has(session.panelId));
+    S.panels=S.panels.filter(panel=>panel.objectId!==projectId);
+    S.objects=S.objects.filter(object=>object.id!==projectId);
+    renderAll();
+  }catch(error){
+    console.error(error);
+    alert("Neizdevās dzēst projektu: "+error.message);
+  }
+}
+
+function renderProjects(){
+  const box=$("projectList");
+  if(!box)return;
+
+  const queryText=($("projectSearch")?.value||"").trim().toLowerCase();
+  box.innerHTML="";
+
+  S.objects
+    .filter(project=>!queryText||String(project.name||"").toLowerCase().includes(queryText))
+    .sort((a,b)=>String(a.name||"").localeCompare(String(b.name||""),"lv",{numeric:true,sensitivity:"base"}))
+    .forEach(project=>{
+      const panels=S.panels.filter(panel=>panel.objectId===project.id);
+      const panelIds=new Set(panels.map(panel=>panel.id));
+      const sessions=S.sessions.filter(session=>panelIds.has(session.panelId));
+      const activeCount=sessions.filter(isActiveSession).length;
+
+      const row=document.createElement("div");
+      row.className="project-row";
+
+      const info=document.createElement("div");
+      info.className="project-info";
+      info.innerHTML=`
+        <strong>${project.name}</strong>
+        <small>${panels.length} paneļi · ${sessions.length} sesijas${activeCount?` · ${activeCount} aktīvi`:""}</small>
+      `;
+      row.appendChild(info);
+
+      if(S.role==="admin"){
+        const button=document.createElement("button");
+        button.className="project-delete-btn";
+        button.textContent="🗑 Dzēst";
+        button.onclick=()=>deleteProject(project.id);
+        row.appendChild(button);
+      }
+
+      box.appendChild(row);
     });
 
-    batch.delete(doc(db,"objects",projectId));
-
-    await batch.commit();
-    await loadData();
-    renderAll();
-
-  }catch(e){
-    console.error(e);
-    alert("Kļūda dzēšot projektu: "+e.message);
+  if(!box.children.length){
+    box.innerHTML='<p>Nav atrastu projektu.</p>';
   }
 }
 
 function renderFactories(){
   const box=$("factoryManage");box.innerHTML="";
   scopedFactories().forEach(f=>{const wc=S.workers.filter(w=>w.factoryId===f.id).length,pc=S.panels.filter(p=>p.factoryId===f.id).length,row=document.createElement("div");row.className="manage-row";const info=document.createElement("div");info.innerHTML=`<strong>${f.name}</strong><small>${wc} darbinieki · ${pc} paneļi</small>`;const spacer=document.createElement("div");const del=document.createElement("button");del.className="btn danger small";del.textContent="DZĒST";del.onclick=async()=>{if(wc||pc)return alert("Rūpnīca nav tukša.");if(confirm(`Dzēst ${f.name}?`))await deleteDoc(doc(db,"factories",f.id))};row.append(info,spacer,del);box.appendChild(row)});
-}
-
-
-function renderProjects(){
- const box=$("projectList");
- if(!box)return;
- box.innerHTML="";
- S.objects.forEach(project=>{
-  const row=document.createElement("div");
-  row.className="project-line";
-  const count=S.panels.filter(p=>p.objectId===project.id).length;
-  row.innerHTML=`<div><strong>${project.name}</strong><br><small>${count} paneļi</small></div>`;
-  if(S.role==="admin"){
-   const b=document.createElement("button");
-   b.className="project-delete-btn";
-   b.textContent="🗑 Dzēst";
-   b.onclick=()=>deleteProject(project.id);
-   row.appendChild(b);
-  }
-  box.appendChild(row);
- });
 }
 
 function renderImport(){
@@ -885,7 +907,7 @@ function exportExcel(){
   );
 }
 
-function renderAll(){renderIdentity();renderProduction();renderAdminProduction();renderLive();renderReport();renderPanels();renderWorkers();renderFactories();renderImport();renderProjects();renderDanger()}
+function renderAll(){renderIdentity();renderProduction();renderAdminProduction();renderLive();renderReport();renderPanels();renderWorkers();renderFactories();renderProjects();renderImport();renderDanger()}
 function subscribe(name,key){onSnapshot(collection(db,name),snap=>{S[key]=snap.docs.map(d=>({id:d.id,...d.data()}));$("connectionBadge").textContent="Tiešsaistē";$("connectionBadge").className="badge info";renderAll()},e=>{$("connectionBadge").textContent="Nav savienojuma";$("connectionBadge").className="badge muted";console.error(e)})}
 
 setupNav();
@@ -1000,27 +1022,42 @@ $("changeRoleBtn").onclick=clearCurrentIdentity;
 $("workerObject").onchange=renderProduction;$("workerPanelSearch").oninput=renderProduction;
 $("workerPauseBtn").onclick=async()=>{const s=activeForWorker(S.workerId);if(!s)return;if(s.status==="Procesā"){await updateDoc(doc(db,"sessions",s.id),{status:"Pauzē",accumulatedSeconds:elapsed(s),lastResumeAt:null})}else await updateDoc(doc(db,"sessions",s.id),{status:"Procesā",lastResumeAt:serverTimestamp()})};
 $("workerFinishBtn").onclick=async()=>{
+  const sessions=activeSessionsForWorker(S.workerId);
+  const current=sessions[0];
+
+  if(!current){
+    alert("Nav aktīva darba, ko pabeigt.");
+    return;
+  }
+
+  if(!confirm(`Pabeigt savu darbu pie ${current.panelName}?`))return;
+
   try{
-    const s=activeForWorker(S.workerId);
-
-    if(!s){
-      alert("Nav aktīva darba, ko pabeigt.");
-      return;
+    for(let i=0;i<sessions.length;i+=450){
+      const batch=writeBatch(db);
+      sessions.slice(i,i+450).forEach(session=>{
+        batch.update(doc(db,"sessions",session.id),{
+          status:"Pabeigts",
+          accumulatedSeconds:elapsed(session),
+          lastResumeAt:null,
+          endAt:serverTimestamp(),
+          finishedAt:serverTimestamp()
+        });
+      });
+      await batch.commit();
     }
 
-    if(!confirm(`Pabeigt savu darbu pie ${s.panelName}?`)){
-      return;
-    }
-
-    await updateDoc(doc(db,"sessions",s.id),{
-      status:"Pabeigts",
-      accumulatedSeconds:elapsed(s),
-      lastResumeAt:null,
-      endAt:serverTimestamp()
+    // Tūlītēji noņem aktīvās sesijas arī lokālajā skatā.
+    const ids=new Set(sessions.map(session=>session.id));
+    S.sessions.forEach(session=>{
+      if(ids.has(session.id)){
+        session.status="Pabeigts";
+        session.lastResumeAt=null;
+        session.endAt=new Date();
+      }
     });
 
     renderAll();
-
   }catch(error){
     console.error(error);
     alert("Neizdevās pabeigt darbu: "+error.message);
@@ -1029,47 +1066,65 @@ $("workerFinishBtn").onclick=async()=>{
 
 $("workerFinishPanelBtn").onclick=async()=>{
   const worker=currentWorker();
-  const session=activeForWorker(S.workerId);
+  const current=activeForWorker(S.workerId);
 
-  if(!worker||!session)return;
+  if(!worker||!current){
+    alert("Nav aktīva paneļa, ko pabeigt.");
+    return;
+  }
 
-  const otherActive=activeForPanel(session.panelId)
-    .filter(s=>s.workerId!==worker.id);
+  const panelSessions=activeForPanel(current.panelId);
+  const otherActive=panelSessions.filter(session=>session.workerId!==worker.id);
+  const otherNames=[...new Set(otherActive.map(session=>session.workerName))];
 
-  if(otherActive.length){
+  if(otherNames.length){
     alert(
       "Paneli nevar pabeigt.\n\nPie tā vēl strādā:\n" +
-      otherActive.map(s=>"• "+s.workerName).join("\n")
+      otherNames.map(name=>"• "+name).join("\n")
     );
     return;
   }
 
-  if(!confirm(`Vai panelis ${session.panelName} tiešām ir pilnībā pabeigts?`)){
-    return;
-  }
+  if(!confirm(`Vai panelis ${current.panelName} tiešām ir pilnībā pabeigts?`))return;
 
   try{
-    const finalSeconds=elapsed(session);
+    const ownSessions=panelSessions.filter(session=>session.workerId===worker.id);
 
-    await runTransaction(db,async tx=>{
-      const sessionRef=doc(db,"sessions",session.id);
-      const panelRef=doc(db,"panels",session.panelId);
-
-      tx.update(sessionRef,{
-        status:"Pabeigts",
-        accumulatedSeconds:finalSeconds,
-        lastResumeAt:null,
-        endAt:serverTimestamp(),
-        finishedAt:serverTimestamp()
+    for(let i=0;i<ownSessions.length;i+=450){
+      const batch=writeBatch(db);
+      ownSessions.slice(i,i+450).forEach(session=>{
+        batch.update(doc(db,"sessions",session.id),{
+          status:"Pabeigts",
+          accumulatedSeconds:elapsed(session),
+          lastResumeAt:null,
+          endAt:serverTimestamp(),
+          finishedAt:serverTimestamp()
+        });
       });
+      await batch.commit();
+    }
 
-      tx.update(panelRef,{
-        status:"Pabeigts",
-        completedAt:serverTimestamp(),
-        completedByWorkerId:worker.id,
-        completedByWorkerName:worker.name
-      });
+    await updateDoc(doc(db,"panels",current.panelId),{
+      status:"Pabeigts",
+      completedAt:serverTimestamp(),
+      completedByWorkerId:worker.id,
+      completedByWorkerName:worker.name,
+      completedByAdmin:false
     });
+
+    const ownIds=new Set(ownSessions.map(session=>session.id));
+    S.sessions.forEach(session=>{
+      if(ownIds.has(session.id)){
+        session.status="Pabeigts";
+        session.lastResumeAt=null;
+        session.endAt=new Date();
+      }
+    });
+    const panel=by(S.panels,current.panelId);
+    if(panel){
+      panel.status="Pabeigts";
+      panel.completedByWorkerName=worker.name;
+    }
 
     const message=$("workerActionMessage");
     if(message){
@@ -1079,7 +1134,6 @@ $("workerFinishPanelBtn").onclick=async()=>{
     }
 
     renderAll();
-
   }catch(error){
     console.error(error);
     alert("Neizdevās pabeigt paneli: "+error.message);
@@ -1094,6 +1148,7 @@ $("adminProductionObject").onchange=renderAdminProduction;
 $("adminProductionSearch").oninput=renderAdminProduction;
 ["liveFactory","liveObject"].forEach(id=>$(id).onchange=renderLive);["datePreset","overviewFactory","overviewObject","overviewWorker"].forEach(id=>$(id).onchange=renderReport);$("overviewSearch").oninput=renderReport;$("exportCsvBtn").onclick=exportExcel;
 ["assignFactory","assignObject"].forEach(id=>$(id).onchange=renderPanels);$("assignSearch").oninput=renderPanels;$("workerManageSearch").oninput=renderWorkers;
+$("projectSearch").oninput=renderProjects;
 $("addFactory").onclick=async()=>{const n=$("newFactory").value.trim();if(n){await addDoc(collection(db,"factories"),{name:n,createdAt:serverTimestamp()});$("newFactory").value=""}};
 $("addWorker").onclick=async()=>{const n=$("newWorker").value.trim(),f=$("newWorkerFactory").value;if(n&&f){await addDoc(collection(db,"workers"),{name:n,factoryId:f,active:true,createdAt:serverTimestamp()});$("newWorker").value=""}};
 $("createObjectBtn").onclick=async()=>{const n=$("objectName").value.trim();if(n){await addDoc(collection(db,"objects"),{name:n,active:true,createdAt:serverTimestamp()});$("objectName").value="";$("objectMessage").textContent="Objekts izveidots."}};

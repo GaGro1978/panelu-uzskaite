@@ -1,6 +1,6 @@
 {
-  "name": "PPS Paneļu ražošana",
-  "short_name": "PPS",
+  "name": "PPS V5.4 Paneļu ražošanas uzskaite",
+  "short_name": "PPS V5.4",
   "start_url": "./",
   "display": "standalone",
   "background_color": "#f4f6f9",

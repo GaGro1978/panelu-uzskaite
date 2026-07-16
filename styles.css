@@ -975,30 +975,46 @@ body.role-manager .admin-nav [data-admin-view="factoriesPanel"]{
   display:none!important;
 }
 
-.project-delete-btn{
- background:#dc2626;
- color:white;
- border:0;
- border-radius:8px;
- padding:5px 10px;
- font-size:11px;
- font-weight:900;
- cursor:pointer;
+body.role-manager #projectsPanel,
+body.role-manager .admin-nav [data-admin-view="projectsPanel"]{
+  display:none!important;
 }
 
+.project-list{
+  display:grid;
+  gap:8px;
+  margin-top:12px;
+}
+.project-row{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto;
+  align-items:center;
+  gap:10px;
+  padding:11px 12px;
+  border:1px solid var(--line);
+  border-radius:10px;
+  background:#fff;
+}
+.project-info strong{
+  display:block;
+  font-size:17px;
+}
+.project-info small{
+  display:block;
+  margin-top:3px;
+  color:var(--muted);
+  font-size:13px;
+}
 .project-delete-btn{
- background:#dc2626;
- color:#fff;
- border:0;
- border-radius:8px;
- padding:6px 12px;
- font-size:12px;
- font-weight:900;
- cursor:pointer;
+  border:0;
+  border-radius:8px;
+  padding:8px 11px;
+  background:#dc2626;
+  color:#fff;
+  font-size:12px;
+  font-weight:900;
+  cursor:pointer;
 }
 .project-delete-btn:hover{
- background:#b91c1c;
+  background:#b91c1c;
 }
-
-.project-line{display:flex;justify-content:space-between;align-items:center;padding:10px;border:1px solid #ddd;border-radius:10px;margin-bottom:8px;background:#fff}
-.project-delete-btn{background:#dc2626;color:#fff;border:0;border-radius:8px;padding:7px 12px;font-weight:800;cursor:pointer}
