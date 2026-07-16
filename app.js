@@ -164,6 +164,52 @@ function mapRow(row,defaultFactoryName){
 }
 
 
+
+const PPS_API_BASE=String(window.PPS_API_BASE||"").replace(/\/+$/,"");
+
+async function ppsApi(path, options={}){
+  const response=await fetch(`${PPS_API_BASE}${path}`,{
+    ...options,
+    headers:{
+      "Content-Type":"application/json",
+      ...(options.headers||{})
+    }
+  });
+
+  let data=null;
+  try{
+    data=await response.json();
+  }catch{
+    data={ok:false,error:`API kļūda (${response.status})`};
+  }
+
+  if(!response.ok||!data?.ok){
+    throw new Error(data?.error||`API kļūda (${response.status})`);
+  }
+
+  return data;
+}
+
+async function cloudflareLogin(user,pin=""){
+  if(user.role==="worker"){
+    return ppsApi("/api/worker-login",{
+      method:"POST",
+      body:JSON.stringify({
+        name:user.name,
+        factoryName:by(S.factories,user.factoryId)?.name||""
+      })
+    });
+  }
+
+  return ppsApi("/api/login",{
+    method:"POST",
+    body:JSON.stringify({
+      name:user.name,
+      pin
+    })
+  });
+}
+
 const PHOTO_DB_NAME="pps-photo-demo";
 const PHOTO_STORE="photos";
 let photoDbPromise=null;
@@ -1034,11 +1080,24 @@ $("loginPin").addEventListener("keydown",event=>{
   if(event.key==="Enter")$("saveIdentityBtn").click();
 });
 
-$("saveIdentityBtn").onclick=()=>{
+$("saveIdentityBtn").onclick=async()=>{
   const user=selectedLoginUser();
   if(!user)return alert("Izvēlies lietotāju.");
 
   if(user.role==="worker"){
+    try{
+      await cloudflareLogin(user);
+    }catch(error){
+      const message=$("loginPinMessage");
+      if(message){
+        message.textContent=error.message;
+        message.classList.remove("hidden");
+      }else{
+        alert(error.message);
+      }
+      return;
+    }
+
     S.role="worker";
     S.workerId=user.workerId;
     S.managerFactoryId=null;
@@ -1052,11 +1111,12 @@ $("saveIdentityBtn").onclick=()=>{
     localStorage.removeItem("pps_admin_name");
   }else{
     const enteredPin=$("loginPin").value.trim();
-    const requiredPin=user.role==="manager"?MANAGER_PIN:OFFICE_PIN;
 
-    if(enteredPin!==requiredPin){
+    try{
+      await cloudflareLogin(user,enteredPin);
+    }catch(error){
       const message=$("loginPinMessage");
-      message.textContent="Nepareizs PIN.";
+      message.textContent=error.message;
       message.classList.remove("hidden");
       $("loginPin").value="";
       $("loginPin").focus();
