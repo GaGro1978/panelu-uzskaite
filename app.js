@@ -316,7 +316,14 @@ function renderProduction(){
     const left=document.createElement("div");
     left.innerHTML=`<strong>${p.panelName}</strong><small>${by(S.objects,p.objectId)?.name||"—"} · ${activeSessions.length?`strādā: ${activeSessions.map(s=>s.workerName).join(", ")}`:"brīvs"}</small>`;
     const btn=document.createElement("button");btn.className="btn primary";btn.textContent=activeSessions.length?"PIEVIENOTIES":"SĀKT";btn.onclick=()=>startSession(p.id);
-    row.append(left,btn);box.appendChild(row);
+    row.append(left,btn);if(S.role==="admin"){
+ const del=document.createElement("button");
+ del.className="project-delete-btn";
+ del.textContent="Dzēst";
+ del.onclick=()=>deleteProject(project.id);
+ row.appendChild(del);
+}
+box.appendChild(row);
   });
   if(!panels.length)box.innerHTML='<p>Nav pieejamu paneļu.</p>';
 }
@@ -691,6 +698,41 @@ async function deleteWorker(id){
   for(const p of S.panels.filter(p=>(p.assignedWorkerIds||[]).includes(id)))await updateDoc(doc(db,"panels",p.id),{assignedWorkerIds:(p.assignedWorkerIds||[]).filter(x=>x!==id)});
   await deleteDoc(doc(db,"workers",id));if(S.workerId===id){S.workerId=null;localStorage.removeItem("pps_worker_id")}
 }
+
+async function deleteProject(projectId){
+  if(S.role!=="admin"){
+    alert("Projektus var dzēst tikai ofisa darbinieki.");
+    return;
+  }
+
+  const project=by(S.objects,projectId);
+  if(!project)return;
+
+  const panels=S.panels.filter(p=>p.objectId===projectId);
+
+  if(!confirm(`Dzēst projektu "${project.name}"?\n\nTiks dzēsti arī ${panels.length} paneļi.`)){
+    return;
+  }
+
+  try{
+    const batch=writeBatch(db);
+
+    panels.forEach(panel=>{
+      batch.delete(doc(db,"panels",panel.id));
+    });
+
+    batch.delete(doc(db,"objects",projectId));
+
+    await batch.commit();
+    await loadData();
+    renderAll();
+
+  }catch(e){
+    console.error(e);
+    alert("Kļūda dzēšot projektu: "+e.message);
+  }
+}
+
 function renderFactories(){
   const box=$("factoryManage");box.innerHTML="";
   scopedFactories().forEach(f=>{const wc=S.workers.filter(w=>w.factoryId===f.id).length,pc=S.panels.filter(p=>p.factoryId===f.id).length,row=document.createElement("div");row.className="manage-row";const info=document.createElement("div");info.innerHTML=`<strong>${f.name}</strong><small>${wc} darbinieki · ${pc} paneļi</small>`;const spacer=document.createElement("div");const del=document.createElement("button");del.className="btn danger small";del.textContent="DZĒST";del.onclick=async()=>{if(wc||pc)return alert("Rūpnīca nav tukša.");if(confirm(`Dzēst ${f.name}?`))await deleteDoc(doc(db,"factories",f.id))};row.append(info,spacer,del);box.appendChild(row)});
