@@ -999,7 +999,33 @@ $("changeRoleBtn").onclick=clearCurrentIdentity;
 
 $("workerObject").onchange=renderProduction;$("workerPanelSearch").oninput=renderProduction;
 $("workerPauseBtn").onclick=async()=>{const s=activeForWorker(S.workerId);if(!s)return;if(s.status==="Procesā"){await updateDoc(doc(db,"sessions",s.id),{status:"Pauzē",accumulatedSeconds:elapsed(s),lastResumeAt:null})}else await updateDoc(doc(db,"sessions",s.id),{status:"Procesā",lastResumeAt:serverTimestamp()})};
-$("workerFinishBtn").onclick=async()=>{const s=activeForWorker(S.workerId);if(!s||!confirm(`Pabeigt savu darbu pie ${s.panelName}?`))return;await updateDoc(doc(db,"sessions",s.id),{status:"Pabeigts",accumulatedSeconds:elapsed(s),lastResumeAt:null,endAt:serverTimestamp()})};
+$("workerFinishBtn").onclick=async()=>{
+  try{
+    const s=activeForWorker(S.workerId);
+
+    if(!s){
+      alert("Nav aktīva darba, ko pabeigt.");
+      return;
+    }
+
+    if(!confirm(`Pabeigt savu darbu pie ${s.panelName}?`)){
+      return;
+    }
+
+    await updateDoc(doc(db,"sessions",s.id),{
+      status:"Pabeigts",
+      accumulatedSeconds:elapsed(s),
+      lastResumeAt:null,
+      endAt:serverTimestamp()
+    });
+
+    renderAll();
+
+  }catch(error){
+    console.error(error);
+    alert("Neizdevās pabeigt darbu: "+error.message);
+  }
+};
 
 $("workerFinishPanelBtn").onclick=async()=>{
   const worker=currentWorker();
@@ -1033,7 +1059,8 @@ $("workerFinishPanelBtn").onclick=async()=>{
         status:"Pabeigts",
         accumulatedSeconds:finalSeconds,
         lastResumeAt:null,
-        endAt:serverTimestamp()
+        endAt:serverTimestamp(),
+        finishedAt:serverTimestamp()
       });
 
       tx.update(panelRef,{
