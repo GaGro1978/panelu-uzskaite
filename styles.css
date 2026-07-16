@@ -1069,3 +1069,30 @@ body.role-manager .admin-nav [data-admin-view="projectsPanel"]{
     font-size:11px;
   }
 }
+
+/* PPS V6.1 — ražotnes vadītāja foto */
+.manager-photo-button,
+.manager-photo-count{
+  border:0;
+  border-radius:8px;
+  padding:6px 9px;
+  font-size:11px;
+  font-weight:900;
+  cursor:pointer;
+}
+.manager-photo-button{
+  background:#0f766e;
+  color:#fff;
+}
+.manager-photo-count{
+  background:#e0f2fe;
+  color:#075985;
+  min-width:58px;
+}
+@media(max-width:620px){
+  .manager-photo-button,
+  .manager-photo-count{
+    padding:6px 7px;
+    font-size:10px;
+  }
+}

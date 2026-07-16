@@ -1,10 +1,12 @@
-PPS V6.0 — RAŽOTNES VADĪTĀJA TAIMERIS
+PPS V6.1 — VADĪTĀJA FOTO
 
 Pievienots:
-- ražotnes vadītājs var nospiest “Sākt” vai “Pievienoties” pie paneļa;
-- vadītājam sākas sava darba sesija un taimeris;
-- vadītājs var nospiest “Pabeigt savu darbu”;
-- “Panelis pabeigts” paliek atsevišķa darbība;
-- vadītājs vienlaikus var strādāt tikai pie viena paneļa.
+- rūpnīcas vadītājs var pie jebkura savas rūpnīcas paneļa nospiest “📷 Foto”;
+- atveras telefona kamera/galerijas izvēle;
+- pie paneļa redzams foto skaits;
+- nospiežot uz foto skaita, atveras galerija;
+- vadītājs var dzēst nevajadzīgos foto.
 
-Pārējā PPS darbība nav mainīta.
+Svarīgi:
+- šajā solī foto vēl glabājas konkrētās ierīces pārlūkā;
+- NAS pieslēgšana būs nākamais solis.

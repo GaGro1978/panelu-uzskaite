@@ -643,6 +643,72 @@ async function adminFinishPanel(panelId){
   }
 }
 
+
+let managerPhotoPanelId=null;
+
+async function managerTakePanelPhoto(panelId){
+  if(S.role!=="manager")return;
+  managerPhotoPanelId=panelId;
+  $("managerPanelPhotoInput")?.click();
+}
+
+async function managerOpenPanelPhotos(panelId){
+  if(S.role!=="manager")return;
+
+  const panel=by(S.panels,panelId);
+  if(!panel)return;
+
+  const grid=$("photoGalleryGrid");
+  const modal=$("photoGalleryModal");
+
+  $("photoGalleryTitle").textContent=panel.panelName;
+  $("photoGallerySubtitle").textContent=by(S.objects,panel.objectId)?.name||"";
+  grid.innerHTML="<p>Ielādē…</p>";
+  modal.classList.remove("hidden");
+
+  try{
+    const photos=await getPanelPhotos(panelId);
+    grid.innerHTML="";
+
+    if(!photos.length){
+      grid.innerHTML="<p>Šim panelim vēl nav foto.</p>";
+      return;
+    }
+
+    photos.forEach(photo=>{
+      const item=document.createElement("div");
+      item.className="photo-gallery-item";
+
+      const image=document.createElement("img");
+      const url=URL.createObjectURL(photo.blob);
+      image.src=url;
+      image.alt=`${panel.panelName} foto`;
+      image.onclick=()=>window.open(url,"_blank");
+
+      const meta=document.createElement("div");
+      meta.className="photo-gallery-meta";
+      meta.innerHTML=`<span>${new Date(photo.createdAt).toLocaleString("lv-LV")}</span><span>${photo.workerName||""}</span>`;
+
+      const del=document.createElement("button");
+      del.className="photo-delete";
+      del.textContent="Dzēst";
+      del.onclick=async()=>{
+        if(!confirm("Dzēst šo foto?"))return;
+        await deletePanelPhoto(photo.id);
+        URL.revokeObjectURL(url);
+        await managerOpenPanelPhotos(panelId);
+        renderAdminProduction();
+      };
+
+      item.append(image,meta,del);
+      grid.appendChild(item);
+    });
+  }catch(error){
+    console.error(error);
+    grid.innerHTML=`<p>Neizdevās atvērt galeriju: ${error.message}</p>`;
+  }
+}
+
 function renderAdminProduction(){
   if(S.role!=="admin"&&S.role!=="manager")return;
   $("adminProductionCard")?.classList.remove("hidden");
@@ -705,6 +771,24 @@ function renderAdminProduction(){
           startButton.onclick=()=>managerStartSession(p.id);
           top.appendChild(startButton);
         }
+      }
+
+      if(S.role==="manager"){
+        const photoButton=document.createElement("button");
+        photoButton.className="manager-photo-button";
+        photoButton.textContent="📷 Foto";
+        photoButton.onclick=()=>managerTakePanelPhoto(p.id);
+        top.appendChild(photoButton);
+
+        const photoCountButton=document.createElement("button");
+        photoCountButton.className="manager-photo-count";
+        photoCountButton.textContent="📷 …";
+        photoCountButton.onclick=()=>managerOpenPanelPhotos(p.id);
+        top.appendChild(photoCountButton);
+
+        getPanelPhotos(p.id)
+          .then(photos=>{photoCountButton.textContent=`📷 ${photos.length}`;})
+          .catch(()=>{photoCountButton.textContent="📷 !";});
       }
 
       if(p.status!=="Pabeigts"){
@@ -1299,6 +1383,39 @@ function clearCurrentIdentity(){
 $("changeIdentityBtn").onclick=clearCurrentIdentity;
 $("changeRoleBtn").onclick=clearCurrentIdentity;
 
+
+
+$("managerPanelPhotoInput").onchange=async event=>{
+  const file=event.target.files?.[0];
+  const panel=by(S.panels,managerPhotoPanelId);
+  if(!file||!panel){
+    event.target.value="";
+    return;
+  }
+
+  try{
+    await savePanelPhoto({
+      panelId:panel.id,
+      panelName:panel.panelName,
+      objectId:panel.objectId,
+      objectName:by(S.objects,panel.objectId)?.name||"",
+      factoryId:panel.factoryId,
+      workerId:managerSessionId(),
+      workerName:S.loginName||"Ražotnes vadītājs",
+      createdAt:new Date().toISOString(),
+      blob:file
+    });
+
+    alert("Foto pievienots.");
+    renderAdminProduction();
+  }catch(error){
+    console.error(error);
+    alert("Neizdevās saglabāt foto.");
+  }finally{
+    event.target.value="";
+    managerPhotoPanelId=null;
+  }
+};
 
 $("takePhotoBtn").onclick=()=>{
   if(!activeForWorker(S.workerId))return alert("Vispirms uzsāc darbu pie paneļa.");
