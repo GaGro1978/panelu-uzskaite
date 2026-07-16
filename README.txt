@@ -1,6 +1,7 @@
-PPS V4.9
+PPS V5.3
 
-Projektu dzēšana:
-- poga 🗑 Dzēst redzama tikai ofisa darbiniekiem;
-- dzēš projektu un tā paneļus;
-- pirms dzēšanas ir apstiprinājums.
+Ražošanas labojumi:
+- salabota paneļa pabeigšana;
+- pabeigtas sesijas vairs nerādās kā aktīvas;
+- taimeri apstājas pēc darba/paneļa pabeigšanas;
+- ražošanas skats pārzīmējas pēc darbības.

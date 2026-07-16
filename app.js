@@ -38,8 +38,8 @@ const fmt=v=>{const d=toDate(v);return d?new Intl.DateTimeFormat("lv-LV",{day:"2
 const hms=s=>{s=Math.max(0,Math.floor(s||0));return [Math.floor(s/3600),Math.floor((s%3600)/60),s%60].map(v=>String(v).padStart(2,"0")).join(":")};
 const elapsed=s=>{let t=s?.accumulatedSeconds||0;if(s?.status==="Procesā"&&s.lastResumeAt){const d=toDate(s.lastResumeAt);if(d)t+=(Date.now()-d.getTime())/1000}return t};
 const currentWorker=()=>by(S.workers,S.workerId);
-const activeForWorker=id=>S.sessions.find(s=>s.workerId===id&&(s.status==="Procesā"||s.status==="Pauzē"));
-const activeForPanel=id=>S.sessions.filter(s=>s.panelId===id&&(s.status==="Procesā"||s.status==="Pauzē"));
+const activeForWorker=id=>S.sessions.find(s=>s.workerId===id&&(s.status==="Procesā"||s.status==="Pauzē")&&s.status!=="Pabeigts");
+const activeForPanel=id=>S.sessions.filter(s=>s.panelId===id&&(s.status==="Procesā"||s.status==="Pauzē")&&s.status!=="Pabeigts");
 
 function applyRoleUi(){
   document.body.classList.remove("role-worker","role-admin","role-manager");
@@ -1077,6 +1077,9 @@ $("workerFinishPanelBtn").onclick=async()=>{
       message.classList.remove("hidden");
       setTimeout(()=>message.classList.add("hidden"),2200);
     }
+
+    renderAll();
+
   }catch(error){
     console.error(error);
     alert("Neizdevās pabeigt paneli: "+error.message);
