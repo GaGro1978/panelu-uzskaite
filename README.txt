@@ -1,17 +1,10 @@
-PPS V5.7 — CLOUDFLARE LOGIN
+PPS V6.0 — RAŽOTNES VADĪTĀJA TAIMERIS
 
-Kas mainīts:
-- ražotņu vadītāju PIN pārbauda Cloudflare Worker;
-- ofisa PIN pārbauda Cloudflare Worker;
-- darbinieka pieslēgšanos apstiprina Cloudflare Worker;
-- API adrese jau ierakstīta api-config.js;
-- dizains un pārējā PPS darbība nav mainīta.
+Pievienots:
+- ražotnes vadītājs var nospiest “Sākt” vai “Pievienoties” pie paneļa;
+- vadītājam sākas sava darba sesija un taimeris;
+- vadītājs var nospiest “Pabeigt savu darbu”;
+- “Panelis pabeigts” paliek atsevišķa darbība;
+- vadītājs vienlaikus var strādāt tikai pie viena paneļa.
 
-Svarīgi:
-- foto joprojām glabājas tikai konkrētās ierīces pārlūkā;
-- foto uz NAS/Cloudflare vēl neiet, jo failu glabātuve vēl nav pieslēgta;
-- Synology serveris paliek neskarts.
-
-GitHub:
-Aizvieto visus esošos PPS failus ar šīs pakotnes failiem.
-Pēc ielādes lapas augšā jābūt PPS V5.7.
+Pārējā PPS darbība nav mainīta.

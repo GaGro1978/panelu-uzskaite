@@ -488,6 +488,100 @@ async function startSession(panelId){
 
 
 
+
+function managerSessionId(){
+  return `manager:${S.loginName||"vaditajs"}`;
+}
+
+function activeManagerSession(){
+  return activeForWorker(managerSessionId());
+}
+
+async function managerStartSession(panelId){
+  if(S.role!=="manager")return;
+
+  const panel=by(S.panels,panelId);
+  if(!panel)return;
+
+  const current=activeManagerSession();
+  if(current){
+    alert(`Tev jau ir aktīvs darbs pie ${current.panelName}.`);
+    return;
+  }
+
+  const others=activeForPanel(panelId);
+  if(
+    others.length &&
+    !confirm(`Pie paneļa jau strādā ${[...new Set(others.map(s=>s.workerName))].join(", ")}. Pievienoties?`)
+  )return;
+
+  try{
+    await runTransaction(db,async tx=>{
+      const panelRef=doc(db,"panels",panelId);
+      const snap=await tx.get(panelRef);
+      const data=snap.data();
+
+      if(data.status==="Pabeigts"){
+        throw new Error("Panelis jau pabeigts.");
+      }
+
+      const sessionRef=doc(collection(db,"sessions"));
+      tx.set(sessionRef,{
+        panelId,
+        panelName:data.panelName,
+        objectId:data.objectId,
+        factoryId:data.factoryId,
+        workerId:managerSessionId(),
+        workerName:S.loginName||"Ražotnes vadītājs",
+        status:"Procesā",
+        startAt:serverTimestamp(),
+        lastResumeAt:serverTimestamp(),
+        accumulatedSeconds:0,
+        endAt:null,
+        createdAt:serverTimestamp(),
+        startedByManager:true
+      });
+
+      tx.update(panelRef,{status:"Procesā"});
+    });
+
+    renderAll();
+  }catch(error){
+    console.error(error);
+    alert("Neizdevās sākt darbu: "+error.message);
+  }
+}
+
+async function managerFinishOwnWork(){
+  if(S.role!=="manager")return;
+
+  const session=activeManagerSession();
+  if(!session){
+    alert("Tev nav aktīva darba.");
+    return;
+  }
+
+  if(!confirm(`Pabeigt savu darbu pie ${session.panelName}?`))return;
+
+  try{
+    await updateDoc(doc(db,"sessions",session.id),{
+      status:"Pabeigts",
+      accumulatedSeconds:elapsed(session),
+      lastResumeAt:null,
+      endAt:serverTimestamp(),
+      finishedAt:serverTimestamp()
+    });
+
+    session.status="Pabeigts";
+    session.lastResumeAt=null;
+    session.endAt=new Date();
+    renderAll();
+  }catch(error){
+    console.error(error);
+    alert("Neizdevās pabeigt darbu: "+error.message);
+  }
+}
+
 async function adminFinishPanel(panelId){
   if(S.role!=="admin"&&S.role!=="manager"){
     alert("Šī darbība pieejama tikai vadītājam vai ofisam.");
@@ -552,6 +646,7 @@ async function adminFinishPanel(panelId){
 function renderAdminProduction(){
   if(S.role!=="admin"&&S.role!=="manager")return;
   $("adminProductionCard")?.classList.remove("hidden");
+
   const scope=currentFactoryScope();
   const panels=S.panels.filter(p=>!scope||p.factoryId===scope);
   const objects=S.objects.filter(o=>panels.some(p=>p.objectId===o.id));
@@ -562,6 +657,8 @@ function renderAdminProduction(){
   const box=$("adminProductionList");
   if(!box)return;
   box.innerHTML="";
+
+  const managerActive=S.role==="manager"?activeManagerSession():null;
 
   panels
     .filter(p=>(!objectId||p.objectId===objectId)&&(!q||String(p.panelName||"").toLowerCase().includes(q)))
@@ -585,10 +682,35 @@ function renderAdminProduction(){
       panelNo.textContent=p.panelName;
       top.appendChild(panelNo);
 
+      if(S.role==="manager"&&p.status!=="Pabeigts"){
+        const ownSession=sessions.find(s=>s.workerId===managerSessionId());
+
+        if(ownSession){
+          const ownTime=document.createElement("span");
+          ownTime.className="manager-own-time";
+          ownTime.textContent=hms(elapsed(ownSession));
+          top.appendChild(ownTime);
+
+          const finishOwn=document.createElement("button");
+          finishOwn.className="manager-work-button finish";
+          finishOwn.textContent="Pabeigt savu darbu";
+          finishOwn.onclick=managerFinishOwnWork;
+          top.appendChild(finishOwn);
+        }else{
+          const startButton=document.createElement("button");
+          startButton.className="manager-work-button";
+          startButton.textContent=sessions.length?"Pievienoties":"Sākt";
+          startButton.disabled=Boolean(managerActive);
+          startButton.title=managerActive?`Tev jau ir aktīvs darbs pie ${managerActive.panelName}`:"";
+          startButton.onclick=()=>managerStartSession(p.id);
+          top.appendChild(startButton);
+        }
+      }
+
       if(p.status!=="Pabeigts"){
         const finishButton=document.createElement("button");
         finishButton.className="admin-finish-panel compact";
-        finishButton.textContent="✔ Pabeigt";
+        finishButton.textContent="✔ Panelis pabeigts";
         finishButton.onclick=()=>adminFinishPanel(p.id);
         top.appendChild(finishButton);
       }

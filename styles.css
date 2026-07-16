@@ -1033,3 +1033,39 @@ body.role-manager .admin-nav [data-admin-view="projectsPanel"]{
 .photo-gallery-meta{padding:7px 8px;color:var(--muted);font-size:10px}
 .photo-delete{width:calc(100% - 12px);margin:0 6px 6px;border:0;border-radius:7px;padding:7px;background:#fee2e2;color:#991b1b;font-weight:900}
 @media(max-width:620px){.photo-gallery-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;padding:8px}}
+
+/* PPS V6.0 — ražotnes vadītāja darba taimeris */
+.manager-work-button{
+  border:0;
+  border-radius:8px;
+  padding:6px 10px;
+  background:#2563eb;
+  color:#fff;
+  font-size:12px;
+  font-weight:900;
+  cursor:pointer;
+}
+.manager-work-button.finish{
+  background:#0f766e;
+}
+.manager-work-button:disabled{
+  opacity:.45;
+  cursor:not-allowed;
+}
+.manager-own-time{
+  min-width:68px;
+  font-variant-numeric:tabular-nums;
+  font-size:14px;
+  font-weight:900;
+  color:#0f766e;
+}
+@media(max-width:620px){
+  .admin-production-topline{
+    gap:6px;
+  }
+  .manager-work-button,
+  .admin-finish-panel.compact{
+    padding:6px 8px;
+    font-size:11px;
+  }
+}
