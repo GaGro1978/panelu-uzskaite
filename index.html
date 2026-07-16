@@ -4,14 +4,14 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#111827">
-  <title>PPS V5.4</title>
+  <title>PPS V5.5</title>
   <link rel="manifest" href="manifest.json">
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
 <header class="app-header">
   <div>
-    <h1>PPS V5.4</h1>
+    <h1>PPS V5.5</h1>
     <p>Paneļu ražošanas uzskaite</p>
   </div>
   <div class="header-tools">
@@ -107,6 +107,12 @@
         </div>
         <div id="workerTimer" class="timer">00:00:00</div>
         <div id="otherWorkersActive" class="other-workers"></div>
+        <div class="photo-actions">
+          <input id="panelPhotoInput" type="file" accept="image/*" capture="environment" class="hidden">
+          <button id="takePhotoBtn" class="btn photo-primary">📷 PIEVIENOT FOTO</button>
+          <button id="openGalleryBtn" class="btn photo-count">📷 <span id="photoCount">0</span></button>
+        </div>
+        <div id="photoMessage" class="photo-message hidden"></div>
         <div class="active-actions worker-three-actions">
           <button id="workerPauseBtn" class="btn warning">PAUZE</button>
           <button id="workerFinishBtn" class="btn secondary-action">PABEIGT SAVU DARBU</button>
@@ -333,8 +339,20 @@
   </section>
 </main>
 
+
+<div id="photoGalleryModal" class="photo-modal hidden">
+  <div class="photo-modal-backdrop" data-close-photo-modal="1"></div>
+  <div class="photo-modal-card">
+    <div class="photo-modal-header">
+      <div><strong id="photoGalleryTitle">Paneļa foto</strong><small id="photoGallerySubtitle"></small></div>
+      <button id="closeGalleryBtn" class="photo-close" type="button">×</button>
+    </div>
+    <div id="photoGalleryGrid" class="photo-gallery-grid"></div>
+  </div>
+</div>
+
 <script src="cache-reset.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script type="module" src="app.js?v=5.4"></script>
+<script type="module" src="app.js?v=5.5"></script>
 </body>
 </html>

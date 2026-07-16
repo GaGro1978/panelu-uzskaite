@@ -163,6 +163,103 @@ function mapRow(row,defaultFactoryName){
   };
 }
 
+
+const PHOTO_DB_NAME="pps-photo-demo";
+const PHOTO_STORE="photos";
+let photoDbPromise=null;
+
+function openPhotoDb(){
+  if(photoDbPromise)return photoDbPromise;
+  photoDbPromise=new Promise((resolve,reject)=>{
+    const request=indexedDB.open(PHOTO_DB_NAME,1);
+    request.onupgradeneeded=()=>{
+      const db=request.result;
+      if(!db.objectStoreNames.contains(PHOTO_STORE)){
+        const store=db.createObjectStore(PHOTO_STORE,{keyPath:"id",autoIncrement:true});
+        store.createIndex("panelId","panelId",{unique:false});
+      }
+    };
+    request.onsuccess=()=>resolve(request.result);
+    request.onerror=()=>reject(request.error);
+  });
+  return photoDbPromise;
+}
+
+async function savePanelPhoto(photo){
+  const db=await openPhotoDb();
+  return new Promise((resolve,reject)=>{
+    const tx=db.transaction(PHOTO_STORE,"readwrite");
+    const req=tx.objectStore(PHOTO_STORE).add(photo);
+    req.onsuccess=()=>resolve(req.result);
+    req.onerror=()=>reject(req.error);
+  });
+}
+
+async function getPanelPhotos(panelId){
+  if(!panelId)return [];
+  const db=await openPhotoDb();
+  return new Promise((resolve,reject)=>{
+    const tx=db.transaction(PHOTO_STORE,"readonly");
+    const req=tx.objectStore(PHOTO_STORE).index("panelId").getAll(panelId);
+    req.onsuccess=()=>resolve((req.result||[]).sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt)));
+    req.onerror=()=>reject(req.error);
+  });
+}
+
+async function deletePanelPhoto(photoId){
+  const db=await openPhotoDb();
+  return new Promise((resolve,reject)=>{
+    const tx=db.transaction(PHOTO_STORE,"readwrite");
+    const req=tx.objectStore(PHOTO_STORE).delete(photoId);
+    req.onsuccess=()=>resolve();
+    req.onerror=()=>reject(req.error);
+  });
+}
+
+async function updateActivePanelPhotoCount(){
+  const session=activeForWorker(S.workerId);
+  if(!$("photoCount"))return;
+  $("photoCount").textContent=session ? String((await getPanelPhotos(session.panelId)).length) : "0";
+}
+
+async function renderPhotoGallery(){
+  const session=activeForWorker(S.workerId);
+  if(!session)return;
+  $("photoGalleryTitle").textContent=session.panelName;
+  $("photoGallerySubtitle").textContent=by(S.objects,session.objectId)?.name||"";
+  $("photoGalleryModal").classList.remove("hidden");
+  const grid=$("photoGalleryGrid");
+  grid.innerHTML="<p>Ielādē…</p>";
+  const photos=await getPanelPhotos(session.panelId);
+  grid.innerHTML="";
+  if(!photos.length){
+    grid.innerHTML="<p>Šim panelim vēl nav foto.</p>";
+    return;
+  }
+  photos.forEach(photo=>{
+    const item=document.createElement("div");
+    item.className="photo-gallery-item";
+    const img=document.createElement("img");
+    const url=URL.createObjectURL(photo.blob);
+    img.src=url;
+    img.onclick=()=>window.open(url,"_blank");
+    const meta=document.createElement("div");
+    meta.className="photo-gallery-meta";
+    meta.textContent=new Date(photo.createdAt).toLocaleString("lv-LV");
+    const del=document.createElement("button");
+    del.className="photo-delete";
+    del.textContent="Dzēst";
+    del.onclick=async()=>{
+      if(!confirm("Dzēst šo foto?"))return;
+      await deletePanelPhoto(photo.id);
+      await renderPhotoGallery();
+      await updateActivePanelPhotoCount();
+    };
+    item.append(img,meta,del);
+    grid.appendChild(item);
+  });
+}
+
 function setupNav(){
   document.querySelectorAll(".main-tab").forEach(button=>{
     button.onclick=()=>{
@@ -299,6 +396,7 @@ function renderIdentity(){
 
 function renderProduction(){
   if(S.role!=="worker")return;
+  updateActivePanelPhotoCount();
   const w=currentWorker();if(!w)return;
   const objects=S.objects.filter(o=>S.panels.some(p=>p.objectId===o.id&&p.factoryId===w.factoryId));
   fill($("workerObject"),objects,"Visi objekti");
@@ -1018,6 +1116,40 @@ function clearCurrentIdentity(){
 
 $("changeIdentityBtn").onclick=clearCurrentIdentity;
 $("changeRoleBtn").onclick=clearCurrentIdentity;
+
+
+$("takePhotoBtn").onclick=()=>{
+  if(!activeForWorker(S.workerId))return alert("Vispirms uzsāc darbu pie paneļa.");
+  $("panelPhotoInput").click();
+};
+$("panelPhotoInput").onchange=async event=>{
+  const file=event.target.files?.[0],session=activeForWorker(S.workerId),worker=currentWorker();
+  if(!file||!session||!worker){event.target.value="";return;}
+  try{
+    await savePanelPhoto({
+      panelId:session.panelId,
+      panelName:session.panelName,
+      objectId:session.objectId,
+      objectName:by(S.objects,session.objectId)?.name||"",
+      factoryId:session.factoryId,
+      workerId:worker.id,
+      workerName:worker.name,
+      createdAt:new Date().toISOString(),
+      blob:file
+    });
+    await updateActivePanelPhotoCount();
+    $("photoMessage").textContent="✓ Foto pievienots";
+    $("photoMessage").classList.remove("hidden");
+    setTimeout(()=>$("photoMessage").classList.add("hidden"),1800);
+  }catch(error){
+    console.error(error);
+    alert("Neizdevās saglabāt foto.");
+  }
+  event.target.value="";
+};
+$("openGalleryBtn").onclick=renderPhotoGallery;
+$("closeGalleryBtn").onclick=()=>$("photoGalleryModal").classList.add("hidden");
+document.querySelectorAll("[data-close-photo-modal]").forEach(el=>el.onclick=()=>$("photoGalleryModal").classList.add("hidden"));
 
 $("workerObject").onchange=renderProduction;$("workerPanelSearch").oninput=renderProduction;
 $("workerPauseBtn").onclick=async()=>{const s=activeForWorker(S.workerId);if(!s)return;if(s.status==="Procesā"){await updateDoc(doc(db,"sessions",s.id),{status:"Pauzē",accumulatedSeconds:elapsed(s),lastResumeAt:null})}else await updateDoc(doc(db,"sessions",s.id),{status:"Procesā",lastResumeAt:serverTimestamp()})};
