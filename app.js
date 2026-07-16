@@ -207,6 +207,36 @@ function selectedLoginUser(){
   return buildLoginUsers().find(user=>user.id===value);
 }
 
+
+async function deleteProjectV49(projectId){
+  if(S.role!=="admin"){
+    alert("Projektus var dzēst tikai ofisa darbinieki.");
+    return;
+  }
+
+  const project=by(S.objects,projectId);
+  if(!project)return;
+
+  const panels=S.panels.filter(p=>p.objectId===projectId);
+
+  if(!confirm(`Dzēst projektu "${project.name}"?\nTiks dzēsti arī ${panels.length} paneļi.`))
+    return;
+
+  try{
+    const batch=writeBatch(db);
+    panels.forEach(panel=>{
+      batch.delete(doc(db,"panels",panel.id));
+    });
+    batch.delete(doc(db,"objects",projectId));
+    await batch.commit();
+    await loadData();
+    renderAll();
+  }catch(e){
+    console.error(e);
+    alert("Neizdevās dzēst projektu: "+e.message);
+  }
+}
+
 function renderLoginUserInfo(){
   const user=selectedLoginUser();
   const info=$("loginUserInfo");
@@ -323,7 +353,14 @@ function renderProduction(){
  del.onclick=()=>deleteProject(project.id);
  row.appendChild(del);
 }
-box.appendChild(row);
+if(S.role==="admin" && project){
+        const del=document.createElement("button");
+        del.className="project-delete-btn";
+        del.textContent="🗑 Dzēst";
+        del.onclick=()=>deleteProjectV49(project.id);
+        row.appendChild(del);
+      }
+      box.appendChild(row);
   });
   if(!panels.length)box.innerHTML='<p>Nav pieejamu paneļu.</p>';
 }

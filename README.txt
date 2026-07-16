@@ -1,8 +1,6 @@
-PPS V4.8
+PPS V4.9
 
-Pievienota projektu dzēšana.
-
-- Tikai ofisa darbinieki var dzēst projektus.
-- Pirms dzēšanas ir apstiprinājums.
-- Dzēšot projektu tiek dzēsti arī tā paneļi.
-- Ražotņu vadītājiem šī funkcija nav pieejama.
+Projektu dzēšana:
+- poga 🗑 Dzēst redzama tikai ofisa darbiniekiem;
+- dzēš projektu un tā paneļus;
+- pirms dzēšanas ir apstiprinājums.
