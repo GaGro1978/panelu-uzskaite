@@ -775,6 +775,27 @@ function renderFactories(){
   scopedFactories().forEach(f=>{const wc=S.workers.filter(w=>w.factoryId===f.id).length,pc=S.panels.filter(p=>p.factoryId===f.id).length,row=document.createElement("div");row.className="manage-row";const info=document.createElement("div");info.innerHTML=`<strong>${f.name}</strong><small>${wc} darbinieki · ${pc} paneļi</small>`;const spacer=document.createElement("div");const del=document.createElement("button");del.className="btn danger small";del.textContent="DZĒST";del.onclick=async()=>{if(wc||pc)return alert("Rūpnīca nav tukša.");if(confirm(`Dzēst ${f.name}?`))await deleteDoc(doc(db,"factories",f.id))};row.append(info,spacer,del);box.appendChild(row)});
 }
 
+
+function renderProjects(){
+ const box=$("projectList");
+ if(!box)return;
+ box.innerHTML="";
+ S.objects.forEach(project=>{
+  const row=document.createElement("div");
+  row.className="project-line";
+  const count=S.panels.filter(p=>p.objectId===project.id).length;
+  row.innerHTML=`<div><strong>${project.name}</strong><br><small>${count} paneļi</small></div>`;
+  if(S.role==="admin"){
+   const b=document.createElement("button");
+   b.className="project-delete-btn";
+   b.textContent="🗑 Dzēst";
+   b.onclick=()=>deleteProject(project.id);
+   row.appendChild(b);
+  }
+  box.appendChild(row);
+ });
+}
+
 function renderImport(){
   fill($("importObject"),S.objects);fill($("defaultFactory"),S.factories,"— nav piešķirta —");
 }
@@ -864,7 +885,7 @@ function exportExcel(){
   );
 }
 
-function renderAll(){renderIdentity();renderProduction();renderAdminProduction();renderLive();renderReport();renderPanels();renderWorkers();renderFactories();renderImport();renderDanger()}
+function renderAll(){renderIdentity();renderProduction();renderAdminProduction();renderLive();renderReport();renderPanels();renderWorkers();renderFactories();renderImport();renderProjects();renderDanger()}
 function subscribe(name,key){onSnapshot(collection(db,name),snap=>{S[key]=snap.docs.map(d=>({id:d.id,...d.data()}));$("connectionBadge").textContent="Tiešsaistē";$("connectionBadge").className="badge info";renderAll()},e=>{$("connectionBadge").textContent="Nav savienojuma";$("connectionBadge").className="badge muted";console.error(e)})}
 
 setupNav();
