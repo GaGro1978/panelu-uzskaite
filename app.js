@@ -1042,23 +1042,82 @@ async function deletePanel(id){
 }
 
 function renderWorkers(){
-  fill($("newWorkerFactory"),S.factories);
+  const factories=S.role==="manager"?scopedFactories():S.factories;
+  fill($("newWorkerFactory"),factories);
+
+  const factorySelect=$("newWorkerFactory");
+  if(S.role==="manager"&&S.managerFactoryId){
+    factorySelect.value=S.managerFactoryId;
+    factorySelect.disabled=true;
+  }else{
+    factorySelect.disabled=false;
+  }
+
   const box=$("workerManage"),q=$("workerManageSearch").value.trim().toLowerCase();box.innerHTML="";
   scopedWorkers().filter(w=>!q||w.name.toLowerCase().includes(q)).forEach(w=>{
     const row=document.createElement("div");row.className="manage-row";
-    const info=document.createElement("div");info.innerHTML=`<strong>${w.name}</strong><small>${by(S.factories,w.factoryId)?.name||"—"} · ${S.sessions.filter(s=>s.workerId===w.id).length} sesijas</small>`;
-    const fs=document.createElement("select");S.factories.forEach(f=>{const o=document.createElement("option");o.value=f.id;o.textContent=f.name;o.selected=f.id===w.factoryId;fs.appendChild(o)});
-    fs.onchange=async()=>{if(activeForWorker(w.id)){alert("Aktīvu darbinieku nevar pārcelt.");fs.value=w.factoryId;return}await updateDoc(doc(db,"workers",w.id),{factoryId:fs.value})};
-    const del=document.createElement("button");del.className="btn danger small";del.textContent="DZĒST";del.onclick=()=>deleteWorker(w.id);
-    row.append(info,fs);if(S.role==="admin")row.appendChild(del);box.appendChild(row);
+    const info=document.createElement("div");
+    info.innerHTML=`<strong>${w.name}</strong><small>${by(S.factories,w.factoryId)?.name||"—"} · ${S.sessions.filter(s=>s.workerId===w.id).length} sesijas</small>`;
+
+    row.appendChild(info);
+
+    if(S.role==="admin"){
+      const fs=document.createElement("select");
+      S.factories.forEach(f=>{
+        const o=document.createElement("option");
+        o.value=f.id;
+        o.textContent=f.name;
+        o.selected=f.id===w.factoryId;
+        fs.appendChild(o);
+      });
+      fs.onchange=async()=>{
+        if(activeForWorker(w.id)){
+          alert("Aktīvu darbinieku nevar pārcelt.");
+          fs.value=w.factoryId;
+          return;
+        }
+        await updateDoc(doc(db,"workers",w.id),{factoryId:fs.value});
+      };
+      row.appendChild(fs);
+    }
+
+    const del=document.createElement("button");
+    del.className="btn danger small";
+    del.textContent="DZĒST";
+    del.onclick=()=>deleteWorker(w.id);
+    row.appendChild(del);
+
+    box.appendChild(row);
   });
 }
+
 async function deleteWorker(id){
-  if(S.role!=="admin")return alert("Darbiniekus dzēst var tikai ofisa darbinieks.");
-  const w=by(S.workers,id);if(activeForWorker(id))return alert("Darbiniekam ir aktīvs darbs.");
+  const w=by(S.workers,id);
+  if(!w)return;
+
+  if(S.role==="manager"&&w.factoryId!==S.managerFactoryId){
+    return alert("Var dzēst tikai savas rūpnīcas darbiniekus.");
+  }
+
+  if(S.role!=="admin"&&S.role!=="manager"){
+    return alert("Nav tiesību dzēst darbiniekus.");
+  }
+
+  if(activeForWorker(id))return alert("Darbiniekam ir aktīvs darbs.");
   if(!confirm(`Dzēst darbinieku ${w.name}?`))return;
-  for(const p of S.panels.filter(p=>(p.assignedWorkerIds||[]).includes(id)))await updateDoc(doc(db,"panels",p.id),{assignedWorkerIds:(p.assignedWorkerIds||[]).filter(x=>x!==id)});
-  await deleteDoc(doc(db,"workers",id));if(S.workerId===id){S.workerId=null;localStorage.removeItem("pps_worker_id")}
+
+  for(const p of S.panels.filter(p=>(p.assignedWorkerIds||[]).includes(id))){
+    await updateDoc(doc(db,"panels",p.id),{
+      assignedWorkerIds:(p.assignedWorkerIds||[]).filter(x=>x!==id)
+    });
+  }
+
+  await deleteDoc(doc(db,"workers",id));
+
+  if(S.workerId===id){
+    S.workerId=null;
+    localStorage.removeItem("pps_worker_id");
+  }
 }
 
 async function deleteProject(projectId){
@@ -1581,7 +1640,25 @@ $("adminProductionSearch").oninput=renderAdminProduction;
 ["assignFactory","assignObject"].forEach(id=>$(id).onchange=renderPanels);$("assignSearch").oninput=renderPanels;$("workerManageSearch").oninput=renderWorkers;
 $("projectSearch").oninput=renderProjects;
 $("addFactory").onclick=async()=>{const n=$("newFactory").value.trim();if(n){await addDoc(collection(db,"factories"),{name:n,createdAt:serverTimestamp()});$("newFactory").value=""}};
-$("addWorker").onclick=async()=>{const n=$("newWorker").value.trim(),f=$("newWorkerFactory").value;if(n&&f){await addDoc(collection(db,"workers"),{name:n,factoryId:f,active:true,createdAt:serverTimestamp()});$("newWorker").value=""}};
+$("addWorker").onclick=async()=>{
+  const n=$("newWorker").value.trim();
+  const f=S.role==="manager"?S.managerFactoryId:$("newWorkerFactory").value;
+
+  if(!n||!f)return;
+
+  if(S.role!=="admin"&&S.role!=="manager"){
+    return alert("Nav tiesību pievienot darbiniekus.");
+  }
+
+  await addDoc(collection(db,"workers"),{
+    name:n,
+    factoryId:f,
+    active:true,
+    createdAt:serverTimestamp()
+  });
+
+  $("newWorker").value="";
+};
 $("createObjectBtn").onclick=async()=>{const n=$("objectName").value.trim();if(n){await addDoc(collection(db,"objects"),{name:n,active:true,createdAt:serverTimestamp()});$("objectName").value="";$("objectMessage").textContent="Objekts izveidots."}};
 $("previewBtn").onclick=async()=>{const file=$("excelFile").files[0];if(!file)return alert("Izvēlies Excel failu.");const wb=XLSX.read(await file.arrayBuffer(),{type:"array"}),rows=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{defval:null,raw:true}),f=by(S.factories,$("defaultFactory").value);S.preview=rows.map(r=>mapRow(r,f?.name||"")).filter(r=>r.panelName||r.designation||r.errors.length);renderPreview()};
 $("importObject").onchange=()=>{$("importBtn").disabled=!S.preview.some(r=>r.valid)||!$("importObject").value};

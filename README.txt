@@ -1,12 +1,7 @@
-PPS V6.1 — VADĪTĀJA FOTO
+PPS V6.2 — VADĪTĀJA DARBINIEKU PĀRVALDĪBA
 
-Pievienots:
-- rūpnīcas vadītājs var pie jebkura savas rūpnīcas paneļa nospiest “📷 Foto”;
-- atveras telefona kamera/galerijas izvēle;
-- pie paneļa redzams foto skaits;
-- nospiežot uz foto skaita, atveras galerija;
-- vadītājs var dzēst nevajadzīgos foto.
-
-Svarīgi:
-- šajā solī foto vēl glabājas konkrētās ierīces pārlūkā;
-- NAS pieslēgšana būs nākamais solis.
+- Ražotnes vadītājs redz tikai savas rūpnīcas darbiniekus.
+- Vadītājs var pievienot darbiniekus tikai savai rūpnīcai.
+- Vadītājs var dzēst tikai savas rūpnīcas darbiniekus.
+- Vadītājam netiek rādīta citu rūpnīcu izvēle.
+- Ofiss joprojām var pārvaldīt visas rūpnīcas.
