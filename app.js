@@ -260,22 +260,52 @@ function photoQuery(panelId){
   });
 }
 
+async function ensurePhotoApiLogin(){
+  if(getPpsToken())return;
+
+  if(S.role==="worker"){
+    const worker=currentWorker();
+    if(!worker)throw new Error("Darbinieks nav atrasts. Pieslēdzies vēlreiz.");
+
+    await cloudflareLogin({
+      name:worker.name,
+      role:"worker",
+      factoryId:worker.factoryId
+    });
+    return;
+  }
+
+  throw new Error("Pieslēdzies sistēmā vēlreiz.");
+}
+
 async function savePanelPhoto(photo){
   if(!photo?.blob)throw new Error("Foto fails nav atrasts.");
 
-  const query=photoQuery(photo.panelId);
-  const headers=new Headers({
-    "Content-Type":photo.blob.type||"image/jpeg",
-    "X-File-Name":photo.blob.name||`photo_${Date.now()}.jpg`
-  });
+  await ensurePhotoApiLogin();
 
-  const data=await ppsApi(`/api/photos/upload?${query.toString()}`,{
+  const query=photoQuery(photo.panelId);
+
+  const upload=()=>ppsApi(`/api/photos/upload?${query.toString()}`,{
     method:"POST",
-    headers,
+    headers:new Headers({
+      "Content-Type":photo.blob.type||"image/jpeg",
+      "X-File-Name":photo.blob.name||`photo_${Date.now()}.jpg`
+    }),
     body:photo.blob
   });
 
-  return data.photo;
+  try{
+    const data=await upload();
+    return data.photo;
+  }catch(error){
+    if(S.role==="worker"&&/autoriz|401|token/i.test(error.message)){
+      setPpsToken("");
+      await ensurePhotoApiLogin();
+      const data=await upload();
+      return data.photo;
+    }
+    throw error;
+  }
 }
 
 async function getPanelPhotos(panelId){
