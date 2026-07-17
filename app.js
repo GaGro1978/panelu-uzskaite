@@ -166,15 +166,42 @@ function mapRow(row,defaultFactoryName){
 
 
 const PPS_API_BASE=String(window.PPS_API_BASE||"").replace(/\/+$/,"");
+const PPS_TOKEN_KEY="pps_api_token";
 
-async function ppsApi(path, options={}){
-  const response=await fetch(`${PPS_API_BASE}${path}`,{
+function getPpsToken(){
+  return localStorage.getItem(PPS_TOKEN_KEY)||"";
+}
+
+function setPpsToken(token){
+  if(token)localStorage.setItem(PPS_TOKEN_KEY,token);
+  else localStorage.removeItem(PPS_TOKEN_KEY);
+}
+
+async function ppsFetch(path,options={}){
+  const headers=new Headers(options.headers||{});
+  const token=getPpsToken();
+
+  if(token)headers.set("Authorization",`Bearer ${token}`);
+
+  return fetch(`${PPS_API_BASE}${path}`,{
     ...options,
-    headers:{
-      "Content-Type":"application/json",
-      ...(options.headers||{})
-    }
+    headers
   });
+}
+
+async function ppsApi(path,options={}){
+  const headers=new Headers(options.headers||{});
+
+  if(
+    options.body!==undefined &&
+    !(options.body instanceof Blob) &&
+    !(options.body instanceof FormData) &&
+    !headers.has("Content-Type")
+  ){
+    headers.set("Content-Type","application/json");
+  }
+
+  const response=await ppsFetch(path,{...options,headers});
 
   let data=null;
   try{
@@ -184,6 +211,7 @@ async function ppsApi(path, options={}){
   }
 
   if(!response.ok||!data?.ok){
+    if(response.status===401)setPpsToken("");
     throw new Error(data?.error||`API kļūda (${response.status})`);
   }
 
@@ -191,119 +219,169 @@ async function ppsApi(path, options={}){
 }
 
 async function cloudflareLogin(user,pin=""){
-  if(user.role==="worker"){
-    return ppsApi("/api/worker-login",{
-      method:"POST",
-      body:JSON.stringify({
-        name:user.name,
-        factoryName:by(S.factories,user.factoryId)?.name||""
+  const data=user.role==="worker"
+    ? await ppsApi("/api/worker-login",{
+        method:"POST",
+        body:JSON.stringify({
+          name:user.name,
+          factoryName:by(S.factories,user.factoryId)?.name||""
+        })
       })
-    });
-  }
+    : await ppsApi("/api/login",{
+        method:"POST",
+        body:JSON.stringify({
+          name:user.name,
+          pin
+        })
+      });
 
-  return ppsApi("/api/login",{
-    method:"POST",
-    body:JSON.stringify({
-      name:user.name,
-      pin
-    })
-  });
+  setPpsToken(data.token||"");
+  return data;
 }
 
-const PHOTO_DB_NAME="pps-photo-demo";
-const PHOTO_STORE="photos";
-let photoDbPromise=null;
+function photoContext(panelId){
+  const panel=by(S.panels,panelId);
+  if(!panel)throw new Error("Panelis nav atrasts.");
 
-function openPhotoDb(){
-  if(photoDbPromise)return photoDbPromise;
-  photoDbPromise=new Promise((resolve,reject)=>{
-    const request=indexedDB.open(PHOTO_DB_NAME,1);
-    request.onupgradeneeded=()=>{
-      const db=request.result;
-      if(!db.objectStoreNames.contains(PHOTO_STORE)){
-        const store=db.createObjectStore(PHOTO_STORE,{keyPath:"id",autoIncrement:true});
-        store.createIndex("panelId","panelId",{unique:false});
-      }
-    };
-    request.onsuccess=()=>resolve(request.result);
-    request.onerror=()=>reject(request.error);
+  return {
+    panel,
+    objectName:by(S.objects,panel.objectId)?.name||"Objekts",
+    factoryName:by(S.factories,panel.factoryId)?.name||"Rūpnīca"
+  };
+}
+
+function photoQuery(panelId){
+  const context=photoContext(panelId);
+
+  return new URLSearchParams({
+    object:context.objectName,
+    panel:context.panel.panelName,
+    factory:context.factoryName
   });
-  return photoDbPromise;
 }
 
 async function savePanelPhoto(photo){
-  const db=await openPhotoDb();
-  return new Promise((resolve,reject)=>{
-    const tx=db.transaction(PHOTO_STORE,"readwrite");
-    const req=tx.objectStore(PHOTO_STORE).add(photo);
-    req.onsuccess=()=>resolve(req.result);
-    req.onerror=()=>reject(req.error);
+  if(!photo?.blob)throw new Error("Foto fails nav atrasts.");
+
+  const query=photoQuery(photo.panelId);
+  const headers=new Headers({
+    "Content-Type":photo.blob.type||"image/jpeg",
+    "X-File-Name":photo.blob.name||`photo_${Date.now()}.jpg`
   });
+
+  const data=await ppsApi(`/api/photos/upload?${query.toString()}`,{
+    method:"POST",
+    headers,
+    body:photo.blob
+  });
+
+  return data.photo;
 }
 
 async function getPanelPhotos(panelId){
   if(!panelId)return [];
-  const db=await openPhotoDb();
-  return new Promise((resolve,reject)=>{
-    const tx=db.transaction(PHOTO_STORE,"readonly");
-    const req=tx.objectStore(PHOTO_STORE).index("panelId").getAll(panelId);
-    req.onsuccess=()=>resolve((req.result||[]).sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt)));
-    req.onerror=()=>reject(req.error);
-  });
+
+  const query=photoQuery(panelId);
+  const data=await ppsApi(`/api/photos?${query.toString()}`);
+  const photos=data.photos||[];
+
+  return Promise.all(photos.map(async photo=>{
+    const response=await ppsFetch(`/api/photo?id=${encodeURIComponent(photo.id)}`);
+
+    if(!response.ok){
+      let message="Neizdevās ielādēt foto.";
+      try{
+        const error=await response.json();
+        message=error.error||message;
+      }catch{}
+      throw new Error(message);
+    }
+
+    return {
+      ...photo,
+      panelId,
+      createdAt:photo.uploadedAt,
+      workerName:photo.uploadedBy,
+      blob:await response.blob()
+    };
+  }));
 }
 
 async function deletePanelPhoto(photoId){
-  const db=await openPhotoDb();
-  return new Promise((resolve,reject)=>{
-    const tx=db.transaction(PHOTO_STORE,"readwrite");
-    const req=tx.objectStore(PHOTO_STORE).delete(photoId);
-    req.onsuccess=()=>resolve();
-    req.onerror=()=>reject(req.error);
+  await ppsApi(`/api/photo?id=${encodeURIComponent(photoId)}`,{
+    method:"DELETE"
   });
 }
 
 async function updateActivePanelPhotoCount(){
   const session=activeForWorker(S.workerId);
   if(!$("photoCount"))return;
-  $("photoCount").textContent=session ? String((await getPanelPhotos(session.panelId)).length) : "0";
+
+  try{
+    $("photoCount").textContent=session
+      ? String((await getPanelPhotos(session.panelId)).length)
+      : "0";
+  }catch(error){
+    console.error(error);
+    $("photoCount").textContent="!";
+  }
 }
 
 async function renderPhotoGallery(){
   const session=activeForWorker(S.workerId);
   if(!session)return;
+
   $("photoGalleryTitle").textContent=session.panelName;
   $("photoGallerySubtitle").textContent=by(S.objects,session.objectId)?.name||"";
   $("photoGalleryModal").classList.remove("hidden");
+
   const grid=$("photoGalleryGrid");
   grid.innerHTML="<p>Ielādē…</p>";
-  const photos=await getPanelPhotos(session.panelId);
-  grid.innerHTML="";
-  if(!photos.length){
-    grid.innerHTML="<p>Šim panelim vēl nav foto.</p>";
-    return;
+
+  try{
+    const photos=await getPanelPhotos(session.panelId);
+    grid.innerHTML="";
+
+    if(!photos.length){
+      grid.innerHTML="<p>Šim panelim vēl nav foto.</p>";
+      return;
+    }
+
+    photos.forEach(photo=>{
+      const item=document.createElement("div");
+      item.className="photo-gallery-item";
+
+      const image=document.createElement("img");
+      const imageUrl=URL.createObjectURL(photo.blob);
+      image.src=imageUrl;
+      image.onclick=()=>window.open(imageUrl,"_blank");
+
+      const meta=document.createElement("div");
+      meta.className="photo-gallery-meta";
+      meta.innerHTML=`<span>${new Date(photo.createdAt).toLocaleString("lv-LV")}</span><span>${photo.workerName||""}</span>`;
+
+      item.append(image,meta);
+
+      if(S.role==="manager"||S.role==="admin"){
+        const del=document.createElement("button");
+        del.className="photo-delete";
+        del.textContent="Dzēst";
+        del.onclick=async()=>{
+          if(!confirm("Dzēst šo foto?"))return;
+          await deletePanelPhoto(photo.id);
+          URL.revokeObjectURL(imageUrl);
+          await renderPhotoGallery();
+          await updateActivePanelPhotoCount();
+        };
+        item.appendChild(del);
+      }
+
+      grid.appendChild(item);
+    });
+  }catch(error){
+    console.error(error);
+    grid.innerHTML=`<p>Neizdevās ielādēt foto: ${error.message}</p>`;
   }
-  photos.forEach(photo=>{
-    const item=document.createElement("div");
-    item.className="photo-gallery-item";
-    const img=document.createElement("img");
-    const url=URL.createObjectURL(photo.blob);
-    img.src=url;
-    img.onclick=()=>window.open(url,"_blank");
-    const meta=document.createElement("div");
-    meta.className="photo-gallery-meta";
-    meta.textContent=new Date(photo.createdAt).toLocaleString("lv-LV");
-    const del=document.createElement("button");
-    del.className="photo-delete";
-    del.textContent="Dzēst";
-    del.onclick=async()=>{
-      if(!confirm("Dzēst šo foto?"))return;
-      await deletePanelPhoto(photo.id);
-      await renderPhotoGallery();
-      await updateActivePanelPhotoCount();
-    };
-    item.append(img,meta,del);
-    grid.appendChild(item);
-  });
 }
 
 function setupNav(){
@@ -1435,6 +1513,7 @@ function clearCurrentIdentity(){
   localStorage.removeItem("pps_admin_name");
   localStorage.removeItem("pps_login_name");
   localStorage.removeItem("pps_admin_factory_scope");
+  setPpsToken("");
 
   renderAll();
 }
@@ -1469,7 +1548,7 @@ $("managerPanelPhotoInput").onchange=async event=>{
     renderAdminProduction();
   }catch(error){
     console.error(error);
-    alert("Neizdevās saglabāt foto.");
+    alert("Neizdevās saglabāt foto: "+error.message);
   }finally{
     event.target.value="";
     managerPhotoPanelId=null;
@@ -1501,7 +1580,7 @@ $("panelPhotoInput").onchange=async event=>{
     setTimeout(()=>$("photoMessage").classList.add("hidden"),1800);
   }catch(error){
     console.error(error);
-    alert("Neizdevās saglabāt foto.");
+    alert("Neizdevās saglabāt foto: "+error.message);
   }
   event.target.value="";
 };
