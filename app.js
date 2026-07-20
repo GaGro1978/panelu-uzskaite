@@ -53,6 +53,16 @@ function applyRoleUi(){
 
   const productionTab=document.querySelector('[data-main-view="productionView"]');
   const managementTab=document.querySelector('[data-main-view="adminView"]');
+  const canOpenManagement=S.role==="manager"||S.role==="admin";
+
+  if(managementTab){
+    managementTab.disabled=!canOpenManagement;
+    managementTab.setAttribute("aria-disabled",String(!canOpenManagement));
+    managementTab.tabIndex=canOpenManagement?0:-1;
+    managementTab.style.pointerEvents=canOpenManagement?"":"none";
+    managementTab.style.opacity=canOpenManagement?"":"0.45";
+    managementTab.style.cursor=canOpenManagement?"":"not-allowed";
+  }
 
   if(S.role==="worker"){
     document.body.classList.add("role-worker");
@@ -416,8 +426,12 @@ async function renderPhotoGallery(){
 
 function setupNav(){
   document.querySelectorAll(".main-tab").forEach(button=>{
-    button.onclick=()=>{
-      if(S.role==="worker"&&button.dataset.mainView==="adminView")return;
+    button.onclick=event=>{
+      if(button.dataset.mainView==="adminView"&&!(S.role==="manager"||S.role==="admin")){
+        event.preventDefault();
+        event.stopPropagation();
+        return;
+      }
 
       document.querySelectorAll(".main-tab").forEach(tab=>tab.classList.remove("active"));
       document.querySelectorAll(".main-view").forEach(view=>view.classList.add("hidden"));
