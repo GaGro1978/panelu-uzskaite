@@ -147,7 +147,7 @@ function normalize(v){return String(v??"").trim().toLowerCase().replace(/\s+/g,"
 function num(v){if(v===null||v===undefined||v==="")return null;if(typeof v==="number")return v;const n=Number(String(v).replace(/\s/g,"").replace(",",".").replace(/[^\d.-]/g,""));return Number.isFinite(n)?n:null}
 function field(row,aliases){const keys=Object.keys(row);for(const a of aliases){const k=keys.find(x=>normalize(x)===normalize(a));if(k!==undefined)return row[k]}return null}
 function mapRow(row,defaultFactoryName){
-  const panelName=String(field(row,["Pan. Nr","Pan Nr","Panelis","Panel Nr"])??"").trim();
+  const panelName=String(field(row,["Pan.Nr.","Pan.Nr","Pan. Nr.","Pan. Nr","Pan Nr","Panelis","Panel Nr","Panel","Panel No","Panel Number"])??"").trim();
   const pcs=num(field(row,["PCS","Skaits"]))??1;
   const errors=[];if(!panelName)errors.push("Nav paneļa numura");if(pcs<=0)errors.push("Nederīgs skaits");
   return {
