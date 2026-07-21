@@ -766,6 +766,42 @@ async function adminFinishPanel(panelId){
 }
 
 
+async function adminReturnPanelToProduction(panelId){
+  if(S.role!=="admin"&&S.role!=="manager"){
+    alert("Šī darbība pieejama tikai vadītājam vai ofisam.");
+    return;
+  }
+
+  const panel=by(S.panels,panelId);
+  if(!panel||panel.status!=="Pabeigts")return;
+
+  if(!confirm(`Atlikt paneli ${panel.panelName} atpakaļ ražošanā?\n\nPanelis atkal būs pieejams darbiniekiem.`))return;
+
+  try{
+    await updateDoc(doc(db,"panels",panelId),{
+      status:"Nav sākts",
+      completedAt:null,
+      completedByWorkerId:null,
+      completedByWorkerName:null,
+      completedByAdmin:null,
+      returnedToProductionAt:serverTimestamp(),
+      returnedToProductionBy:S.loginName||S.adminName||"Administrators"
+    });
+
+    panel.status="Nav sākts";
+    panel.completedAt=null;
+    panel.completedByWorkerId=null;
+    panel.completedByWorkerName=null;
+    panel.completedByAdmin=null;
+
+    renderAll();
+  }catch(error){
+    console.error(error);
+    alert("Neizdevās atlikt paneli atpakaļ ražošanā: "+error.message);
+  }
+}
+
+
 let managerPhotoPanelId=null;
 
 async function managerTakePanelPhoto(panelId){
@@ -919,6 +955,13 @@ function renderAdminProduction(){
         finishButton.textContent="✔ Panelis pabeigts";
         finishButton.onclick=()=>adminFinishPanel(p.id);
         top.appendChild(finishButton);
+      }else{
+        const returnButton=document.createElement("button");
+        returnButton.className="admin-finish-panel compact";
+        returnButton.textContent="↩ Atlikt ražošanā";
+        returnButton.title="Atgriezt pabeigtu paneli atpakaļ ražošanā";
+        returnButton.onclick=()=>adminReturnPanelToProduction(p.id);
+        top.appendChild(returnButton);
       }
 
       const meta=document.createElement("small");
