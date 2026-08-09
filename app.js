@@ -146,6 +146,27 @@ const naturalPanelSort=(a,b)=>String(a.panelName||"").localeCompare(
   {numeric:true,sensitivity:"base"}
 );
 
+function effectivePanelStatus(panel){
+  if(!panel)return "Nav sākts";
+  if(String(panel.status||"").trim()==="Pabeigts")return "Pabeigts";
+  if(activeForPanel(panel.id).length)return "Procesā";
+  return "Nav sākts";
+}
+
+function panelStatusRank(status){
+  const value=String(status||"").trim();
+  if(value==="Procesā")return 0;
+  if(value==="Nav sākts")return 1;
+  if(value==="Pabeigts")return 2;
+  return 1;
+}
+
+function panelStatusSort(a,b){
+  const rankDiff=panelStatusRank(effectivePanelStatus(a))-panelStatusRank(effectivePanelStatus(b));
+  if(rankDiff)return rankDiff;
+  return naturalPanelSort(a,b);
+}
+
 function fill(el,items,all=null){
   if(!el)return;
   const old=el.value;el.innerHTML="";
@@ -886,11 +907,10 @@ function renderAdminProduction(){
 
   panels
     .filter(p=>(!objectId||p.objectId===objectId)&&(!q||String(p.panelName||"").toLowerCase().includes(q)))
-    .sort(naturalPanelSort)
+    .sort(panelStatusSort)
     .forEach(p=>{
       const sessions=activeForPanel(p.id);
-      let status=p.status||"Nav sākts";
-      if(sessions.length)status="Procesā";
+      const status=effectivePanelStatus(p);
 
       const row=document.createElement("div");
       row.className="admin-production-row";
@@ -1043,20 +1063,59 @@ function renderReport(){
   const ff=$("overviewFactory").value,fo=$("overviewObject").value,panels=S.panels.filter(p=>(!ff||p.factoryId===ff)&&(!fo||p.objectId===fo)),sessions=filteredSessions();
   $("countNotStarted").textContent=panels.filter(p=>p.status==="Nav sākts").length;$("countRunning").textContent=panels.filter(p=>p.status==="Procesā").length;$("countDone").textContent=panels.filter(p=>p.status==="Pabeigts").length;$("totalTime").textContent=hms(sessions.reduce((a,s)=>a+elapsed(s),0));
   const body=$("overviewBody");body.innerHTML="";
-    const panelRank=status=>status==="Pabeigts"?2:(status==="Procesā"?0:1);
-  sessions
+  const panelRank=panelStatusRank;
+  const q=$("overviewSearch").value.trim().toLowerCase();
+  const fw=$("overviewWorker").value;
+
+  const rows=sessions.map(s=>({
+    kind:"session",
+    session:s,
+    panel:by(S.panels,s.panelId),
+    panelStatus:effectivePanelStatus(by(S.panels,s.panelId)),
+    sortTime:toDate(s.startAt)?.getTime()||0
+  }));
+
+  // Paneļiem ar statusu "Nav sākts" vēl nav darba sesijas, tāpēc tie iepriekš
+  // Pārskata tabulā vispār neparādījās. Ja nav izvēlēts konkrēts darbinieks,
+  // pievienojam tos kā atsevišķas paneļa rindas.
+  if(!fw){
+    panels
+      .filter(p=>p.status==="Nav sākts")
+      .filter(p=>!q||String(p.panelName||"").toLowerCase().includes(q))
+      .forEach(p=>rows.push({
+        kind:"panel",
+        panel:p,
+        panelStatus:"Nav sākts",
+        sortTime:0
+      }));
+  }
+
+  rows
     .sort((a,b)=>{
-      const aPanelStatus=by(S.panels,a.panelId)?.status||"Nav sākts";
-      const bPanelStatus=by(S.panels,b.panelId)?.status||"Nav sākts";
-      const rankDiff=panelRank(aPanelStatus)-panelRank(bPanelStatus);
+      const rankDiff=panelRank(a.panelStatus)-panelRank(b.panelStatus);
       if(rankDiff)return rankDiff;
-      return (toDate(b.startAt)?.getTime()||0)-(toDate(a.startAt)?.getTime()||0);
+
+      const aName=String(a.panel?.panelName||a.session?.panelName||"");
+      const bName=String(b.panel?.panelName||b.session?.panelName||"");
+      const nameDiff=aName.localeCompare(bName,"lv",{numeric:true,sensitivity:"base"});
+      if(nameDiff)return nameDiff;
+
+      if(a.kind!==b.kind)return a.kind==="panel"?1:-1;
+      return b.sortTime-a.sortTime;
     })
-    .forEach(s=>{
-      const panelStatus=by(S.panels,s.panelId)?.status||"—";
+    .forEach(row=>{
       const tr=document.createElement("tr");
-      tr.className=panelStatus==="Pabeigts"?"report-row-done":(panelStatus==="Procesā"?"report-row-running":"");
-      tr.innerHTML=`<td>${by(S.factories,s.factoryId)?.name||"—"}</td><td>${by(S.objects,s.objectId)?.name||"—"}</td><td><strong>${s.panelName}</strong></td><td>${s.workerName}</td><td>${reportStatusBadge(visibleStatus(s.status),"session")}</td><td>${reportStatusBadge(panelStatus,"panel")}</td><td>${fmt(s.startAt)}</td><td>${fmt(s.endAt)}</td><td>${hms(elapsed(s))}</td>`;
+
+      if(row.kind==="panel"){
+        const p=row.panel;
+        tr.innerHTML=`<td>${by(S.factories,p.factoryId)?.name||"—"}</td><td>${by(S.objects,p.objectId)?.name||"—"}</td><td><strong>${p.panelName||"—"}</strong></td><td>—</td><td>—</td><td>${reportStatusBadge("Nav sākts","panel")}</td><td>—</td><td>—</td><td>—</td>`;
+      }else{
+        const s=row.session;
+        const panelStatus=row.panelStatus;
+        tr.className=panelStatus==="Pabeigts"?"report-row-done":(panelStatus==="Procesā"?"report-row-running":"");
+        tr.innerHTML=`<td>${by(S.factories,s.factoryId)?.name||"—"}</td><td>${by(S.objects,s.objectId)?.name||"—"}</td><td><strong>${s.panelName}</strong></td><td>${s.workerName}</td><td>${reportStatusBadge(visibleStatus(s.status),"session")}</td><td>${reportStatusBadge(panelStatus,"panel")}</td><td>${fmt(s.startAt)}</td><td>${fmt(s.endAt)}</td><td>${hms(elapsed(s))}</td>`;
+      }
+
       body.appendChild(tr);
     });
 }
