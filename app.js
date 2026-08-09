@@ -1037,7 +1037,6 @@ function reportStatusBadge(status,type="session"){
 function renderReport(){
   fill($("overviewFactory"),S.factories,S.role==="admin"?"Visas rūpnīcas":null);
   if(S.role==="worker"&&factoryIdForCurrentWorker())$("overviewFactory").value=factoryIdForCurrentWorker();
-  if(S.role==="admin"&&S.adminFactoryScope)$("overviewFactory").value=S.adminFactoryScope;
   if(S.role==="manager"&&S.managerFactoryId)$("overviewFactory").value=S.managerFactoryId;
   fill($("overviewObject"),S.objects,"Visi objekti");
   fill($("overviewWorker"),S.workers,"Visi darbinieki");
