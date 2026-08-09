@@ -146,6 +146,33 @@ const naturalPanelSort=(a,b)=>String(a.panelName||"").localeCompare(
   {numeric:true,sensitivity:"base"}
 );
 
+function sessionsForPanel(panel){
+  if(!panel)return [];
+  return S.sessions.filter(s=>{
+    if(s.panelId===panel.id)return true;
+
+    // Pēc paneļu atkārtota importa Firestore paneļa dokumenta ID var būt cits,
+    // bet vēsturiskajām sesijām paliek vecais panelId. Tāpēc sasaistām arī pēc
+    // objekta + paneļa numura.
+    return (
+      String(s.objectId||"")===String(panel.objectId||"") &&
+      String(s.panelName||"").trim().toLocaleLowerCase("lv")===
+        String(panel.panelName||"").trim().toLocaleLowerCase("lv")
+    );
+  });
+}
+
+function resolvePanelForSession(session){
+  if(!session)return null;
+
+  return by(S.panels,session.panelId) ||
+    S.panels.find(p=>
+      String(p.objectId||"")===String(session.objectId||"") &&
+      String(p.panelName||"").trim().toLocaleLowerCase("lv")===
+        String(session.panelName||"").trim().toLocaleLowerCase("lv")
+    ) || null;
+}
+
 function effectivePanelStatus(panel){
   if(!panel)return "Nav sākts";
 
@@ -154,7 +181,7 @@ function effectivePanelStatus(panel){
   // Gala statuss vienmēr ir pārāks par sesiju stāvokli.
   if(savedStatus==="Pabeigts")return "Pabeigts";
 
-  const panelSessions=S.sessions.filter(s=>s.panelId===panel.id);
+  const panelSessions=sessionsForPanel(panel);
 
   // Ja pie paneļa šobrīd kāds strādā, tas ir procesā.
   if(panelSessions.some(isActiveSession))return "Procesā";
@@ -1075,26 +1102,32 @@ function renderReport(){
   fill($("overviewObject"),S.objects,"Visi objekti");
   fill($("overviewWorker"),S.workers,"Visi darbinieki");
   const ff=$("overviewFactory").value,fo=$("overviewObject").value,panels=S.panels.filter(p=>(!ff||p.factoryId===ff)&&(!fo||p.objectId===fo)),sessions=filteredSessions();
-  $("countNotStarted").textContent=panels.filter(p=>p.status==="Nav sākts").length;$("countRunning").textContent=panels.filter(p=>p.status==="Procesā").length;$("countDone").textContent=panels.filter(p=>p.status==="Pabeigts").length;$("totalTime").textContent=hms(sessions.reduce((a,s)=>a+elapsed(s),0));
+  $("countNotStarted").textContent=panels.filter(p=>effectivePanelStatus(p)==="Nav sākts").length;
+  $("countRunning").textContent=panels.filter(p=>effectivePanelStatus(p)==="Procesā").length;
+  $("countDone").textContent=panels.filter(p=>effectivePanelStatus(p)==="Pabeigts").length;
+  $("totalTime").textContent=hms(sessions.reduce((a,s)=>a+elapsed(s),0));
   const body=$("overviewBody");body.innerHTML="";
   const panelRank=panelStatusRank;
   const q=$("overviewSearch").value.trim().toLowerCase();
   const fw=$("overviewWorker").value;
 
-  const rows=sessions.map(s=>({
-    kind:"session",
-    session:s,
-    panel:by(S.panels,s.panelId),
-    panelStatus:effectivePanelStatus(by(S.panels,s.panelId)),
-    sortTime:toDate(s.startAt)?.getTime()||0
-  }));
+  const rows=sessions.map(s=>{
+    const panel=resolvePanelForSession(s);
+    return {
+      kind:"session",
+      session:s,
+      panel,
+      panelStatus:effectivePanelStatus(panel),
+      sortTime:toDate(s.startAt)?.getTime()||0
+    };
+  });
 
   // Paneļiem ar statusu "Nav sākts" vēl nav darba sesijas, tāpēc tie iepriekš
   // Pārskata tabulā vispār neparādījās. Ja nav izvēlēts konkrēts darbinieks,
   // pievienojam tos kā atsevišķas paneļa rindas.
   if(!fw){
     panels
-      .filter(p=>p.status==="Nav sākts")
+      .filter(p=>effectivePanelStatus(p)==="Nav sākts")
       .filter(p=>!q||String(p.panelName||"").toLowerCase().includes(q))
       .forEach(p=>rows.push({
         kind:"panel",
