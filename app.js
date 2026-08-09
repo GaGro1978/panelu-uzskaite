@@ -1682,9 +1682,20 @@ $("saveIdentityBtn").onclick=async()=>{
       S.role="admin";
       S.managerFactoryId=null;
       S.adminName=user.name;
+
+      // Ofisa darbiniekam pēc pieslēgšanās sākuma skats vienmēr ir bez
+      // rūpnīcas ierobežojuma — t.i. "Visas rūpnīcas".
+      S.adminFactoryScope="";
+      if($("adminFactoryScope"))$("adminFactoryScope").value="";
+      if($("overviewFactory"))$("overviewFactory").value="";
+      if($("overviewObject"))$("overviewObject").value="";
+      if($("overviewWorker"))$("overviewWorker").value="";
+      if($("datePreset"))$("datePreset").value="all";
+
       localStorage.setItem("pps_role","admin");
       localStorage.setItem("pps_admin_name",user.name);
       localStorage.removeItem("pps_manager_factory_id");
+      localStorage.removeItem("pps_admin_factory_scope");
     }
 
     $("loginPin").value="";
