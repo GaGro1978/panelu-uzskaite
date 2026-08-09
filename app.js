@@ -148,8 +148,22 @@ const naturalPanelSort=(a,b)=>String(a.panelName||"").localeCompare(
 
 function effectivePanelStatus(panel){
   if(!panel)return "Nav sākts";
-  if(String(panel.status||"").trim()==="Pabeigts")return "Pabeigts";
-  if(activeForPanel(panel.id).length)return "Procesā";
+
+  const savedStatus=String(panel.status||"").trim();
+
+  // Gala statuss vienmēr ir pārāks par sesiju stāvokli.
+  if(savedStatus==="Pabeigts")return "Pabeigts";
+
+  const panelSessions=S.sessions.filter(s=>s.panelId===panel.id);
+
+  // Ja pie paneļa šobrīd kāds strādā, tas ir procesā.
+  if(panelSessions.some(isActiveSession))return "Procesā";
+
+  // Ja panelim jau ir bijusi kaut viena pabeigta darba sesija,
+  // tas vairs nav "Nav sākts". Līdz gala pogai "Panelis pabeigts"
+  // paneļa statuss paliek "Procesā".
+  if(panelSessions.some(s=>String(s.status||"").trim()==="Pabeigts"))return "Procesā";
+
   return "Nav sākts";
 }
 
