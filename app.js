@@ -590,6 +590,18 @@ function renderIdentity(){
   $("workerCard").classList.toggle("hidden",S.role!=="worker"||!currentWorker());
   $("adminProductionCard")?.classList.toggle("hidden",!(S.role==="admin"||S.role==="manager"));
 
+  if(S.role==="worker"&&!currentWorker()&&S.workers.length){
+    // Saglabāts vecs darbinieka ID (piem., pēc darbinieku datu izmaiņām).
+    // Notīrām tikai darba lietotāja identitāti, lai var izvēlēties darbinieku no jauna.
+    S.role=null;
+    S.workerId=null;
+    S.loginName="";
+    localStorage.removeItem("pps_role");
+    localStorage.removeItem("pps_worker_id");
+    localStorage.removeItem("pps_login_name");
+    setPpsToken("");
+  }
+
   if(S.role==="worker"&&currentWorker()){
     const worker=currentWorker();
     $("workerTitle").textContent=worker.name;
@@ -1291,70 +1303,486 @@ function renderReport(){
 
 }
 
+function renderPanels(){
+  fill($("assignFactory"),S.factories,S.role==="admin"?"Visas rūpnīcas":null);
+  if(S.role==="worker"&&factoryIdForCurrentWorker())$("assignFactory").value=factoryIdForCurrentWorker();
+  if(S.role==="admin"&&S.adminFactoryScope)$("assignFactory").value=S.adminFactoryScope;
+  if(S.role==="manager"&&S.managerFactoryId)$("assignFactory").value=S.managerFactoryId;
+  fill($("assignObject"),S.objects,"Visi objekti");
+
+  const ff=$("assignFactory").value;
+  const fo=$("assignObject").value;
+  const q=$("assignSearch").value.trim().toLowerCase();
+  const box=$("assignList");
+  const header=$("panelTableHeader");
+
+  box.innerHTML="";
+  header.innerHTML="";
+
+  const filteredPanels=S.panels
+    .filter(p=>(!ff||p.factoryId===ff)&&(!fo||p.objectId===fo)&&(!q||String(p.panelName).toLowerCase().includes(q)))
+    .sort(naturalPanelSort)
+    .slice(0,500);
+
+  const visibleFactoryIds=[...new Set(filteredPanels.map(p=>p.factoryId).filter(Boolean))];
+  const visibleWorkers=S.workers.filter(w=>!ff || w.factoryId===ff || visibleFactoryIds.includes(w.factoryId));
+
+  const columns=[
+    "minmax(155px,1.35fr)",
+    ...visibleWorkers.map(()=> "56px"),
+    "112px",
+    "48px"
+  ];
+  const template=columns.join(" ");
+
+  header.style.gridTemplateColumns=template;
+
+  const headers=[
+    "Panelis",
+    ...visibleWorkers.map(w=>w.name),
+    "Rūpnīca",
+    ""
+  ];
+
+  headers.forEach((text,index)=>{
+    const cell=document.createElement("div");
+    cell.className="panel-th";
+    if(index>0 && index<=visibleWorkers.length){
+      cell.title=text;
+      cell.textContent=text.length>6?text.slice(0,5)+".":text;
+    }else{
+      cell.textContent=text;
+    }
+    header.appendChild(cell);
+  });
+
+  filteredPanels.forEach(p=>{
+    const row=document.createElement("div");
+    row.className="panel-table-row";
+    row.style.gridTemplateColumns=template;
+
+    const st=statusLabel(p);
+
+    const panelCell=document.createElement("div");
+    panelCell.className="panel-td panel-combined";
+    panelCell.innerHTML=`
+      <span class="panel-top status-${st.cls||"free"}">${by(S.objects,p.objectId)?.name||"—"} • ${st.text}</span>
+      <strong>${p.panelName}</strong>
+    `;
+    row.appendChild(panelCell);
+
+    visibleWorkers.forEach(w=>{
+      const cell=document.createElement("div");
+      cell.className="panel-td worker-cell";
+
+      if(w.factoryId!==p.factoryId){
+        cell.innerHTML='<span class="not-applicable">—</span>';
+      }else{
+        const chip=document.createElement("button");
+        chip.className=`worker-mini-chip ${(p.assignedWorkerIds||[]).includes(w.id)?"active":""}`;
+        chip.textContent="👷";
+        chip.title=w.name;
+        chip.setAttribute("aria-label",w.name);
+
+        chip.onclick=async()=>{
+          const cur=[...(p.assignedWorkerIds||[])];
+          const next=cur.includes(w.id)
+            ?cur.filter(id=>id!==w.id)
+            :[...cur,w.id];
+
+          await updateDoc(doc(db,"panels",p.id),{
+            assignedWorkerIds:next
+          });
+        };
+
+        cell.appendChild(chip);
+      }
+
+      row.appendChild(cell);
+    });
+
+    const factoryCell=document.createElement("div");
+    factoryCell.className="panel-td factory-cell";
+
+    const fs=document.createElement("select");
+    fs.className="factory-table-select";
+
+    S.factories.forEach(f=>{
+      const o=document.createElement("option");
+      o.value=f.id;
+      o.textContent=f.name;
+      o.selected=f.id===p.factoryId;
+      fs.appendChild(o);
+    });
+
+    fs.disabled=S.role==="manager";
+    fs.onchange=async()=>{
+      if(S.role==="manager"){
+        fs.value=p.factoryId;
+        return;
+      }
+      const old=p.factoryId;
+      const newId=fs.value;
+
+      if(activeForPanel(p.id).length){
+        alert("Aktīvu paneli nevar pārcelt.");
+        fs.value=old;
+        return;
+      }
+
+      const f=by(S.factories,newId);
+
+      if(!confirm(`Pārcelt ${p.panelName} uz ${f.name}?`)){
+        fs.value=old;
+        return;
+      }
+
+      await updateDoc(doc(db,"panels",p.id),{
+        factoryId:newId,
+        factoryName:f.name,
+        assignedWorkerIds:[]
+      });
+    };
+
+    factoryCell.appendChild(fs);
+    row.appendChild(factoryCell);
+
+    const actionCell=document.createElement("div");
+    actionCell.className="panel-td action-cell";
+
+    const del=document.createElement("button");
+    del.className="panel-delete icon-delete";
+    del.textContent="×";
+    del.title="Dzēst paneli";
+    del.setAttribute("aria-label","Dzēst paneli");
+    del.onclick=()=>deletePanel(p.id);
+
+    actionCell.appendChild(del);
+    row.appendChild(actionCell);
+
+    box.appendChild(row);
+  });
+
+  if(!filteredPanels.length){
+    box.innerHTML='<div class="empty-table">Nav atrastu paneļu.</div>';
+  }
+}
+
+async function deletePanel(id){
+  if(S.role!=="admin")return alert("Paneļus dzēst var tikai ofisa darbinieks.");
+  const p=by(S.panels,id);if(!p)return;if(activeForPanel(id).length)return alert("Aktīvu paneli nevar dzēst.");
+  const sessions=S.sessions.filter(s=>s.panelId===id);if(!confirm(`Dzēst ${p.panelName} un ${sessions.length} darba sesijas?`))return;
+  for(let i=0;i<sessions.length;i+=450){const b=writeBatch(db);sessions.slice(i,i+450).forEach(s=>b.delete(doc(db,"sessions",s.id)));await b.commit()}
+  await deleteDoc(doc(db,"panels",id));
+}
+
+function renderWorkers(){
+  const factories=S.role==="manager"?scopedFactories():S.factories;
+  fill($("newWorkerFactory"),factories);
+
+  const factorySelect=$("newWorkerFactory");
+  if(S.role==="manager"&&S.managerFactoryId){
+    factorySelect.value=S.managerFactoryId;
+    factorySelect.disabled=true;
+  }else{
+    factorySelect.disabled=false;
+  }
+
+  const box=$("workerManage"),q=$("workerManageSearch").value.trim().toLowerCase();box.innerHTML="";
+  scopedWorkers().filter(w=>!q||w.name.toLowerCase().includes(q)).forEach(w=>{
+    const row=document.createElement("div");row.className="manage-row";
+    const info=document.createElement("div");
+    info.innerHTML=`<strong>${w.name}</strong><small>${by(S.factories,w.factoryId)?.name||"—"} · ${S.sessions.filter(s=>s.workerId===w.id).length} sesijas</small>`;
+
+    row.appendChild(info);
+
+    if(S.role==="admin"){
+      const fs=document.createElement("select");
+      S.factories.forEach(f=>{
+        const o=document.createElement("option");
+        o.value=f.id;
+        o.textContent=f.name;
+        o.selected=f.id===w.factoryId;
+        fs.appendChild(o);
+      });
+      fs.onchange=async()=>{
+        if(activeForWorker(w.id)){
+          alert("Aktīvu darbinieku nevar pārcelt.");
+          fs.value=w.factoryId;
+          return;
+        }
+        await updateDoc(doc(db,"workers",w.id),{factoryId:fs.value});
+      };
+      row.appendChild(fs);
+    }
+
+    const del=document.createElement("button");
+    del.className="btn danger small";
+    del.textContent="DZĒST";
+    del.onclick=()=>deleteWorker(w.id);
+    row.appendChild(del);
+
+    box.appendChild(row);
+  });
+}
+
+async function deleteWorker(id){
+  const w=by(S.workers,id);
+  if(!w)return;
+
+  if(S.role==="manager"&&w.factoryId!==S.managerFactoryId){
+    return alert("Var dzēst tikai savas rūpnīcas darbiniekus.");
+  }
+
+  if(S.role!=="admin"&&S.role!=="manager"){
+    return alert("Nav tiesību dzēst darbiniekus.");
+  }
+
+  if(activeForWorker(id))return alert("Darbiniekam ir aktīvs darbs.");
+  if(!confirm(`Dzēst darbinieku ${w.name}?`))return;
+
+  for(const p of S.panels.filter(p=>(p.assignedWorkerIds||[]).includes(id))){
+    await updateDoc(doc(db,"panels",p.id),{
+      assignedWorkerIds:(p.assignedWorkerIds||[]).filter(x=>x!==id)
+    });
+  }
+
+  await deleteDoc(doc(db,"workers",id));
+
+  if(S.workerId===id){
+    S.workerId=null;
+    localStorage.removeItem("pps_worker_id");
+  }
+}
+
+async function deleteProject(projectId){
+  if(S.role!=="admin"){
+    alert("Projektus var dzēst tikai ofisa darbinieki.");
+    return;
+  }
+
+  const project=by(S.objects,projectId);
+  if(!project)return;
+
+  const panels=S.panels.filter(panel=>panel.objectId===projectId);
+  const panelIds=new Set(panels.map(panel=>panel.id));
+  const sessions=S.sessions.filter(session=>panelIds.has(session.panelId));
+  const active=sessions.filter(isActiveSession);
+
+  if(active.length){
+    const names=[...new Set(active.map(session=>session.workerName))];
+    alert(
+      `Projektu nevar dzēst, kamēr tajā ir aktīvi darbi.\n\n` +
+      names.map(name=>"• "+name).join("\n")
+    );
+    return;
+  }
+
+  if(!confirm(
+    `Dzēst projektu "${project.name}"?\n\n` +
+    `Tiks neatgriezeniski dzēsti:\n` +
+    `• ${panels.length} paneļi\n` +
+    `• ${sessions.length} darba sesijas`
+  ))return;
+
+  try{
+    for(let i=0;i<sessions.length;i+=450){
+      const batch=writeBatch(db);
+      sessions.slice(i,i+450).forEach(session=>{
+        batch.delete(doc(db,"sessions",session.id));
+      });
+      await batch.commit();
+    }
+
+    for(let i=0;i<panels.length;i+=450){
+      const batch=writeBatch(db);
+      panels.slice(i,i+450).forEach(panel=>{
+        batch.delete(doc(db,"panels",panel.id));
+      });
+      await batch.commit();
+    }
+
+    await deleteDoc(doc(db,"objects",projectId));
+
+    S.sessions=S.sessions.filter(session=>!panelIds.has(session.panelId));
+    S.panels=S.panels.filter(panel=>panel.objectId!==projectId);
+    S.objects=S.objects.filter(object=>object.id!==projectId);
+    renderAll();
+  }catch(error){
+    console.error(error);
+    alert("Neizdevās dzēst projektu: "+error.message);
+  }
+}
+
+function renderProjects(){
+  const box=$("projectList");
+  if(!box)return;
+
+  const queryText=($("projectSearch")?.value||"").trim().toLowerCase();
+  box.innerHTML="";
+
+  S.objects
+    .filter(project=>!queryText||String(project.name||"").toLowerCase().includes(queryText))
+    .sort((a,b)=>String(a.name||"").localeCompare(String(b.name||""),"lv",{numeric:true,sensitivity:"base"}))
+    .forEach(project=>{
+      const panels=S.panels.filter(panel=>panel.objectId===project.id);
+      const panelIds=new Set(panels.map(panel=>panel.id));
+      const sessions=S.sessions.filter(session=>panelIds.has(session.panelId));
+      const activeCount=sessions.filter(isActiveSession).length;
+
+      const row=document.createElement("div");
+      row.className="project-row";
+
+      const info=document.createElement("div");
+      info.className="project-info";
+      info.innerHTML=`
+        <strong>${project.name}</strong>
+        <small>${panels.length} paneļi · ${sessions.length} sesijas${activeCount?` · ${activeCount} aktīvi`:""}</small>
+      `;
+      row.appendChild(info);
+
+      if(S.role==="admin"){
+        const button=document.createElement("button");
+        button.className="project-delete-btn";
+        button.textContent="🗑 Dzēst";
+        button.onclick=()=>deleteProject(project.id);
+        row.appendChild(button);
+      }
+
+      box.appendChild(row);
+    });
+
+  if(!box.children.length){
+    box.innerHTML='<p>Nav atrastu projektu.</p>';
+  }
+}
+
+function renderFactories(){
+  const box=$("factoryManage");box.innerHTML="";
+  scopedFactories().forEach(f=>{const wc=S.workers.filter(w=>w.factoryId===f.id).length,pc=S.panels.filter(p=>p.factoryId===f.id).length,row=document.createElement("div");row.className="manage-row";const info=document.createElement("div");info.innerHTML=`<strong>${f.name}</strong><small>${wc} darbinieki · ${pc} paneļi</small>`;const spacer=document.createElement("div");const del=document.createElement("button");del.className="btn danger small";del.textContent="DZĒST";del.onclick=async()=>{if(wc||pc)return alert("Rūpnīca nav tukša.");if(confirm(`Dzēst ${f.name}?`))await deleteDoc(doc(db,"factories",f.id))};row.append(info,spacer,del);box.appendChild(row)});
+}
+
+function renderImport(){
+  fill($("importObject"),S.objects);fill($("defaultFactory"),S.factories,"— nav piešķirta —");
+}
+function renderPreview(){
+  const body=$("previewBody");body.innerHTML="";let ok=0,bad=0;
+  S.preview.forEach(r=>{r.valid?ok++:bad++;const tr=document.createElement("tr");tr.innerHTML=`<td>${r.valid?"Derīgs":r.errors.join(", ")}</td><td><strong>${r.panelName||"—"}</strong></td><td>${r.pcs??"—"}</td><td>${r.length??"—"}</td><td>${r.width??"—"}</td><td>${r.height??"—"}</td><td>${r.weight??"—"}</td><td>${r.grossArea??"—"}</td><td>${r.designation||"—"}</td><td>${r.factoryName||"—"}</td>`;body.appendChild(tr)});
+  $("previewCount").textContent=`${S.preview.length} rindas`;$("validationSummary").textContent=`Derīgas: ${ok} | Kļūdainas: ${bad}`;$("previewCard").classList.remove("hidden");$("importBtn").disabled=!ok||!$("importObject").value;
+}
+
+function renderDanger(){
+  fill($("deleteObjectSelect"),S.objects,"Izvēlies objektu…");
+  const o=by(S.objects,$("deleteObjectSelect").value),summary=$("deleteObjectSummary"),btn=$("deleteAllObjectPanelsBtn");
+  if(!o){summary.textContent="Izvēlies objektu.";btn.disabled=true;return}
+  const panels=S.panels.filter(p=>p.objectId===o.id),active=panels.filter(p=>activeForPanel(p.id).length),ids=new Set(panels.map(p=>p.id)),sessions=S.sessions.filter(s=>ids.has(s.panelId));
+  summary.innerHTML=`Objektā <strong>${o.name}</strong>: ${panels.length} paneļi, ${sessions.length} sesijas, aktīvi ${active.length}.`;
+  btn.disabled=!panels.length||active.length||$("deleteObjectConfirm").value.trim()!==o.name;
+}
+
 function exportExcel(){
   if(typeof XLSX==="undefined"){
     alert("Excel bibliotēka nav ielādējusies. Pārlādē lapu un mēģini vēlreiz.");
     return;
   }
 
+  const ff=$("overviewFactory")?.value||"";
+  const fo=$("overviewObject")?.value||"";
+  const fw=$("overviewWorker")?.value||"";
+  const q=($("overviewSearch")?.value||"").trim().toLowerCase();
+
+  // Galvenā Excel lapa ir tieši tāda pati loģika kā Pārskatā:
+  // viena rinda = viens panelis, arī tad, ja tam vēl nav nevienas sesijas.
+  const reportPanels=S.panels
+    .filter(p=>(!ff||p.factoryId===ff)&&(!fo||p.objectId===fo))
+    .filter(p=>!q||String(p.panelName||"").toLowerCase().includes(q))
+    .filter(p=>{
+      if(!fw)return true;
+      return sessionsForPanel(p).some(s=>s.workerId===fw);
+    })
+    .sort(panelStatusSort);
+
+  const panelRows=[[
+    "Rūpnīca","Objekts","Panelis","Darbinieks(-i)","Sesijas",
+    "Paneļa statuss","Pirmais sākums","Pēdējās beigas","Kopējais laiks"
+  ]];
+
+  reportPanels.forEach(panel=>{
+    const panelSessions=sessionsForPanel(panel)
+      .filter(s=>!fw||s.workerId===fw)
+      .sort((a,b)=>(toDate(a.startAt)?.getTime()||0)-(toDate(b.startAt)?.getTime()||0));
+
+    const workers=[...new Set(panelSessions.map(s=>s.workerName).filter(Boolean))];
+    const firstStart=panelSessions.length
+      ? panelSessions.reduce((min,s)=>{
+          const d=toDate(s.startAt);
+          return !d?min:(!min||d<min?d:min);
+        },null)
+      : null;
+    const lastEnd=panelSessions.length
+      ? panelSessions.reduce((max,s)=>{
+          const d=toDate(s.endAt);
+          return !d?max:(!max||d>max?d:max);
+        },null)
+      : null;
+    const totalSeconds=panelSessions.reduce((sum,s)=>sum+elapsed(s),0);
+
+    panelRows.push([
+      by(S.factories,panel.factoryId)?.name||"",
+      by(S.objects,panel.objectId)?.name||"",
+      panel.panelName||"",
+      workers.join(", "),
+      panelSessions.length,
+      effectivePanelStatus(panel),
+      firstStart?fmt(firstStart):"",
+      lastEnd?fmt(lastEnd):"",
+      panelSessions.length?hms(totalSeconds):""
+    ]);
+  });
+
+  // Otrā lapa paliek detalizētai sesiju analīzei.
+  const sessionRows=[[
+    "Rūpnīca","Objekts","Panelis","Darbinieks","Sesijas statuss",
+    "Paneļa statuss","Sākums","Beigas","Darba laiks"
+  ]];
+
   const sessions=filteredSessions()
+    .filter(s=>!q||String(s.panelName||"").toLowerCase().includes(q))
     .sort((a,b)=>(toDate(a.startAt)?.getTime()||0)-(toDate(b.startAt)?.getTime()||0));
 
-  const sessionRows=[
-    ["Rūpnīca","Objekts","Panelis","Darbinieks","Sesijas statuss","Paneļa statuss","Sākums","Beigas","Darba laiks"]
-  ];
-
   sessions.forEach(session=>{
+    const panel=resolvePanelForSession(session);
     sessionRows.push([
-      by(S.factories,session.factoryId)?.name||"",
-      by(S.objects,session.objectId)?.name||"",
-      session.panelName||"",
+      by(S.factories,session.factoryId)?.name||by(S.factories,panel?.factoryId)?.name||"",
+      by(S.objects,session.objectId)?.name||by(S.objects,panel?.objectId)?.name||"",
+      session.panelName||panel?.panelName||"",
       session.workerName||"",
       visibleStatus(session.status)||"",
-      by(S.panels,session.panelId)?.status||"",
+      effectivePanelStatus(panel),
       fmt(session.startAt),
       fmt(session.endAt),
       hms(elapsed(session))
     ]);
   });
 
-  const scopeFactory=$("overviewFactory")?.value||"";
-  const scopeObject=$("overviewObject")?.value||"";
-  const panelRows=[
-    ["Rūpnīca","Objekts","Panelis","Statuss","Pabeidza","Pabeigšanas laiks"]
-  ];
-
-  S.panels
-    .filter(panel=>(!scopeFactory||panel.factoryId===scopeFactory)&&(!scopeObject||panel.objectId===scopeObject))
-    .sort(naturalPanelSort)
-    .forEach(panel=>{
-      panelRows.push([
-        by(S.factories,panel.factoryId)?.name||"",
-        by(S.objects,panel.objectId)?.name||"",
-        panel.panelName||"",
-        panel.status||"",
-        panel.completedByWorkerName||"",
-        fmt(panel.completedAt)
-      ]);
-    });
-
   const workbook=XLSX.utils.book_new();
-  const sessionsSheet=XLSX.utils.aoa_to_sheet(sessionRows);
   const panelsSheet=XLSX.utils.aoa_to_sheet(panelRows);
+  const sessionsSheet=XLSX.utils.aoa_to_sheet(sessionRows);
 
+  panelsSheet["!cols"]=[
+    {wch:16},{wch:18},{wch:16},{wch:28},{wch:10},
+    {wch:18},{wch:20},{wch:20},{wch:16}
+  ];
   sessionsSheet["!cols"]=[
     {wch:16},{wch:18},{wch:16},{wch:18},{wch:17},
-    {wch:16},{wch:20},{wch:20},{wch:14}
-  ];
-  panelsSheet["!cols"]=[
-    {wch:16},{wch:18},{wch:16},{wch:14},{wch:20},{wch:20}
+    {wch:18},{wch:20},{wch:20},{wch:14}
   ];
 
+  panelsSheet["!autofilter"]={ref:`A1:I${Math.max(1,panelRows.length)}`};
   sessionsSheet["!autofilter"]={ref:`A1:I${Math.max(1,sessionRows.length)}`};
-  panelsSheet["!autofilter"]={ref:`A1:F${Math.max(1,panelRows.length)}`};
 
+  XLSX.utils.book_append_sheet(workbook,panelsSheet,"Pārskats");
   XLSX.utils.book_append_sheet(workbook,sessionsSheet,"Darba sesijas");
-  XLSX.utils.book_append_sheet(workbook,panelsSheet,"Paneļi");
 
   XLSX.writeFile(
     workbook,
