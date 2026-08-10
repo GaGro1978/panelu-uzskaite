@@ -1095,6 +1095,95 @@ function reportStatusBadge(status,type="session"){
   return `<span class="report-status ${cls}${strong}"><span class="report-status-icon">${icon}</span>${value}</span>`;
 }
 
+
+function downloadReportDiagnostics(){
+  const ff=$("overviewFactory")?.value||"";
+  const fo=$("overviewObject")?.value||"";
+  const fw=$("overviewWorker")?.value||"";
+  const q=($("overviewSearch")?.value||"").trim().toLowerCase();
+
+  const filteredPanels=S.panels.filter(p=>{
+    if(ff&&p.factoryId!==ff)return false;
+    if(fo&&p.objectId!==fo)return false;
+    if(q&&!String(p.panelName||"").toLowerCase().includes(q))return false;
+    return true;
+  });
+
+  const filteredPanelIds=new Set(filteredPanels.map(p=>p.id));
+
+  const filteredSessions=S.sessions.filter(s=>{
+    const matchedPanel=resolvePanelForSession(s);
+    if(!matchedPanel||!filteredPanelIds.has(matchedPanel.id))return false;
+    if(fw&&s.workerId!==fw)return false;
+    return true;
+  });
+
+  const panelRows=filteredPanels.map(p=>{
+    const sessions=sessionsForPanel(p);
+    const doneSessions=sessions.filter(s=>String(s.status||"").trim()==="Pabeigts");
+    const activeSessions=sessions.filter(isActiveSession);
+
+    return {
+      panelId:p.id,
+      panelName:p.panelName||"",
+      objectId:p.objectId||"",
+      objectName:by(S.objects,p.objectId)?.name||"",
+      factoryId:p.factoryId||"",
+      factoryName:by(S.factories,p.factoryId)?.name||"",
+      savedPanelStatus:p.status||"",
+      effectivePanelStatus:effectivePanelStatus(p),
+      sessionCount:sessions.length,
+      activeSessionCount:activeSessions.length,
+      completedSessionCount:doneSessions.length,
+      sessions:sessions.map(s=>({
+        id:s.id||"",
+        panelId:s.panelId||"",
+        panelName:s.panelName||"",
+        workerId:s.workerId||"",
+        workerName:s.workerName||"",
+        status:s.status||"",
+        startAt:toDate(s.startAt)?.toISOString?.()||null,
+        endAt:toDate(s.endAt)?.toISOString?.()||null,
+        accumulatedSeconds:s.accumulatedSeconds||0
+      }))
+    };
+  });
+
+  const summary={
+    totalPanels:panelRows.length,
+    notStarted:panelRows.filter(p=>p.effectivePanelStatus==="Nav sākts").length,
+    running:panelRows.filter(p=>p.effectivePanelStatus==="Procesā").length,
+    done:panelRows.filter(p=>p.effectivePanelStatus==="Pabeigts").length
+  };
+
+  const payload={
+    generatedAt:new Date().toISOString(),
+    appVersion:"6.3.10",
+    filters:{
+      factoryId:ff,
+      factoryName:ff?(by(S.factories,ff)?.name||""):"Visas rūpnīcas",
+      objectId:fo,
+      objectName:fo?(by(S.objects,fo)?.name||""):"Visi objekti",
+      workerId:fw,
+      workerName:fw?(by(S.workers,fw)?.name||""):"Visi darbinieki",
+      search:q||""
+    },
+    summary,
+    panels:panelRows,
+    filteredSessionCount:filteredSessions.length
+  };
+
+  const blob=new Blob([JSON.stringify(payload,null,2)],{type:"application/json;charset=utf-8"});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement("a");
+  a.href=url;
+  a.download=`PPS_diagnostika_${new Date().toISOString().slice(0,10)}.json`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+
 function renderReport(){
   fill($("overviewFactory"),S.factories,S.role==="admin"?"Visas rūpnīcas":null);
   if(S.role==="worker"&&factoryIdForCurrentWorker())$("overviewFactory").value=factoryIdForCurrentWorker();
@@ -1966,7 +2055,7 @@ $("adminFactoryScope").onchange=()=>{
 };
 $("adminProductionObject").onchange=renderAdminProduction;
 $("adminProductionSearch").oninput=renderAdminProduction;
-["liveFactory","liveObject"].forEach(id=>$(id).onchange=renderLive);["datePreset","overviewFactory","overviewObject","overviewWorker"].forEach(id=>$(id).onchange=renderReport);$("overviewSearch").oninput=renderReport;$("exportCsvBtn").onclick=exportExcel;
+["liveFactory","liveObject"].forEach(id=>$(id).onchange=renderLive);["datePreset","overviewFactory","overviewObject","overviewWorker"].forEach(id=>$(id).onchange=renderReport);$("overviewSearch").oninput=renderReport;$("exportCsvBtn").onclick=exportExcel;$("exportDiagnosticsBtn").onclick=downloadReportDiagnostics;
 ["assignFactory","assignObject"].forEach(id=>$(id).onchange=renderPanels);$("assignSearch").oninput=renderPanels;$("workerManageSearch").oninput=renderWorkers;
 $("projectSearch").oninput=renderProjects;
 $("addFactory").onclick=async()=>{const n=$("newFactory").value.trim();if(n){await addDoc(collection(db,"factories"),{name:n,createdAt:serverTimestamp()});$("newFactory").value=""}};
