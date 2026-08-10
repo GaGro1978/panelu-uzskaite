@@ -1303,6 +1303,30 @@ function renderReport(){
 
 }
 
+
+function panelMatchesFactory(panel,factoryId){
+  if(!factoryId)return true;
+  if(String(panel?.factoryId||"")===String(factoryId))return true;
+
+  const selectedFactory=by(S.factories,factoryId);
+  const selectedName=String(selectedFactory?.name||"").trim().toLocaleLowerCase("lv");
+  if(!selectedName)return false;
+
+  // Vecākiem/importētiem paneļiem factoryId var būt no iepriekšēja rūpnīcas dokumenta.
+  // Tāpēc pārbaudām arī saglabāto factoryName un objekta rūpnīcu.
+  const panelFactoryName=String(panel?.factoryName||"").trim().toLocaleLowerCase("lv");
+  if(panelFactoryName && panelFactoryName===selectedName)return true;
+
+  const object=by(S.objects,panel?.objectId);
+  if(String(object?.factoryId||"")===String(factoryId))return true;
+
+  const objectFactoryName=String(
+    object?.factoryName || by(S.factories,object?.factoryId)?.name || ""
+  ).trim().toLocaleLowerCase("lv");
+
+  return !!objectFactoryName && objectFactoryName===selectedName;
+}
+
 function renderPanels(){
   fill($("assignFactory"),S.factories,S.role==="admin"?"Visas rūpnīcas":null);
   if(S.role==="worker"&&factoryIdForCurrentWorker())$("assignFactory").value=factoryIdForCurrentWorker();
@@ -1320,12 +1344,22 @@ function renderPanels(){
   header.innerHTML="";
 
   const filteredPanels=S.panels
-    .filter(p=>(!ff||p.factoryId===ff)&&(!fo||p.objectId===fo)&&(!q||String(p.panelName).toLowerCase().includes(q)))
+    .filter(p=>panelMatchesFactory(p,ff))
+    .filter(p=>!fo||p.objectId===fo)
+    .filter(p=>!q||String(p.panelName||"").toLowerCase().includes(q))
     .sort(naturalPanelSort)
     .slice(0,500);
 
+  const selectedFactoryName=String(by(S.factories,ff)?.name||"").trim().toLocaleLowerCase("lv");
   const visibleFactoryIds=[...new Set(filteredPanels.map(p=>p.factoryId).filter(Boolean))];
-  const visibleWorkers=S.workers.filter(w=>!ff || w.factoryId===ff || visibleFactoryIds.includes(w.factoryId));
+  const visibleWorkers=S.workers.filter(w=>{
+    if(!ff)return true;
+    if(w.factoryId===ff||visibleFactoryIds.includes(w.factoryId))return true;
+    const workerFactoryName=String(
+      w.factoryName || by(S.factories,w.factoryId)?.name || ""
+    ).trim().toLocaleLowerCase("lv");
+    return !!selectedFactoryName && workerFactoryName===selectedFactoryName;
+  });
 
   const columns=[
     "minmax(155px,1.35fr)",
@@ -1375,7 +1409,7 @@ function renderPanels(){
       const cell=document.createElement("div");
       cell.className="panel-td worker-cell";
 
-      if(w.factoryId!==p.factoryId){
+      if(!panelMatchesFactory(p,w.factoryId)){
         cell.innerHTML='<span class="not-applicable">—</span>';
       }else{
         const chip=document.createElement("button");
