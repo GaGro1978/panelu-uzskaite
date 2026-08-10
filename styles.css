@@ -1233,3 +1233,21 @@ body.role-manager .admin-nav [data-admin-view="projectsPanel"]{
   color:#334155;
   font-size:11px;
 }
+
+.report-panel-link{
+  appearance:none;
+  border:0;
+  background:none;
+  padding:0;
+  margin:0;
+  font:inherit;
+  font-weight:800;
+  color:inherit;
+  cursor:pointer;
+  text-decoration:underline;
+  text-underline-offset:2px;
+}
+.report-panel-link:hover{opacity:.75}
+.panel-sessions-card{max-width:1000px;width:min(96vw,1000px)}
+.panel-sessions-table{width:100%;min-width:720px}
+.panel-sessions-table th,.panel-sessions-table td{white-space:nowrap}

@@ -196,7 +196,7 @@
         <div class="table-wrap report-table-wrap">
           <table class="overview-table">
             <thead>
-              <tr><th>Rūpnīca</th><th>Objekts</th><th>Panelis</th><th>Darbinieks</th><th>Sesijas statuss</th><th>Paneļa statuss</th><th>Sākums</th><th>Beigas</th><th>Laiks</th></tr>
+              <tr><th>Rūpnīca</th><th>Objekts</th><th>Panelis</th><th>Darbinieks(-i)</th><th>Sesijas</th><th>Paneļa statuss</th><th>Pirmais sākums</th><th>Pēdējās beigas</th><th>Kopējais laiks</th></tr>
             </thead>
             <tbody id="overviewBody"></tbody>
           </table>
@@ -358,9 +358,30 @@
 <script src="cache-reset.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="api-config.js?v=6.2"></script>
-  <script type="module" src="app.js?v=6.3.11"></script>
+  <script type="module" src="app.js?v=6.3.12"></script>
 
   <input id="managerPanelPhotoInput" type="file" accept="image/*" capture="environment" class="hidden">
+
+
+  <div id="panelSessionsModal" class="modal hidden">
+    <div class="modal-card panel-sessions-card">
+      <div class="modal-head">
+        <div>
+          <h3 id="panelSessionsTitle">Paneļa darba sesijas</h3>
+          <p id="panelSessionsSubtitle"></p>
+        </div>
+        <button id="panelSessionsClose" class="btn ghost" type="button">AIZVĒRT</button>
+      </div>
+      <div class="table-wrap">
+        <table class="panel-sessions-table">
+          <thead>
+            <tr><th>Darbinieks</th><th>Sesijas statuss</th><th>Sākums</th><th>Beigas</th><th>Laiks</th><th>Sesijas ID</th></tr>
+          </thead>
+          <tbody id="panelSessionsBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
 
 </body>
 </html>
