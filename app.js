@@ -1304,6 +1304,13 @@ function renderReport(){
 }
 
 
+function statusLabel(panel){
+  const status=effectivePanelStatus(panel);
+  if(status==="Pabeigts")return {text:"Pabeigts",cls:"done"};
+  if(status==="Procesā")return {text:"Procesā",cls:"running"};
+  return {text:"Nav sākts",cls:"free"};
+}
+
 function panelMatchesFactory(panel,factoryId){
   if(!factoryId)return true;
   if(String(panel?.factoryId||"")===String(factoryId))return true;
