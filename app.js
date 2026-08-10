@@ -33,7 +33,12 @@ loginName:localStorage.getItem("pps_login_name")||"",adminName:localStorage.getI
 
 const by=(list,id)=>list.find(x=>x.id===id);
 const toDate=v=>!v?null:typeof v.toDate==="function"?v.toDate():new Date(v);
-const fmt=v=>{const d=toDate(v);return d?new Intl.DateTimeFormat("lv-LV",{day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit"}).format(d):"—"};
+const fmt=v=>{
+  const d=toDate(v);
+  if(!d)return "—";
+  const pad=n=>String(n).padStart(2,"0");
+  return `${d.getFullYear()}.${pad(d.getMonth()+1)}.${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+};
 const hms=s=>{s=Math.max(0,Math.floor(s||0));return [Math.floor(s/3600),Math.floor((s%3600)/60),s%60].map(v=>String(v).padStart(2,"0")).join(":")};
 const elapsed=s=>{let t=s?.accumulatedSeconds||0;if(s?.status==="Procesā"&&s.lastResumeAt){const d=toDate(s.lastResumeAt);if(d)t+=(Date.now()-d.getTime())/1000}return t};
 const visibleStatus=s=>s==="Pauzē"?"Procesā":s;
@@ -1078,11 +1083,40 @@ function periodRange(v){
   else return null;
   return {a,b};
 }
+function sessionInPeriod(session,range){
+  if(!range)return true;
+  const start=toDate(session.startAt);
+  if(!start)return false;
+
+  // Paneļa darbs skaitās periodā, ja sesija ar šo periodu pārklājas.
+  // Pabeigtai sesijai izmantojam endAt, aktīvai — pašreizējo laiku.
+  const end=toDate(session.endAt)||new Date();
+  return start<=range.b && end>=range.a;
+}
+
 function filteredSessions(){
-  const ff=$("overviewFactory").value,fo=$("overviewObject").value,fw=$("overviewWorker").value,q=$("overviewSearch").value.trim().toLowerCase(),r=periodRange($("datePreset").value);
+  const ff=$("overviewFactory").value;
+  const fo=$("overviewObject").value;
+  const fw=$("overviewWorker").value;
+  const q=$("overviewSearch").value.trim().toLowerCase();
+  const r=periodRange($("datePreset").value);
+
   return S.sessions.filter(s=>{
-    if(ff&&s.factoryId!==ff||fo&&s.objectId!==fo||fw&&s.workerId!==fw||q&&!String(s.panelName).toLowerCase().includes(q))return false;
-    if(r){const d=toDate(s.startAt);if(!d||d<r.a||d>r.b)return false}
+    const panel=resolvePanelForSession(s);
+
+    if(ff){
+      if(panel){
+        if(!panelMatchesFactory(panel,ff))return false;
+      }else if(s.factoryId!==ff){
+        return false;
+      }
+    }
+
+    if(fo && String(panel?.objectId||s.objectId||"")!==String(fo))return false;
+    if(fw && s.workerId!==fw)return false;
+    if(q && !String(s.panelName||panel?.panelName||"").toLowerCase().includes(q))return false;
+    if(!sessionInPeriod(s,r))return false;
+
     return true;
   });
 }
@@ -1236,12 +1270,36 @@ function renderReport(){
   if(S.role==="manager"&&S.managerFactoryId)$("overviewFactory").value=S.managerFactoryId;
   fill($("overviewObject"),S.objects,"Visi objekti");
   fill($("overviewWorker"),S.workers,"Visi darbinieki");
-  const ff=$("overviewFactory").value,fo=$("overviewObject").value,panels=S.panels.filter(p=>(!ff||p.factoryId===ff)&&(!fo||p.objectId===fo)),sessions=filteredSessions();
-  $("countNotStarted").textContent=panels.filter(p=>effectivePanelStatus(p)==="Nav sākts").length;
-  $("countRunning").textContent=panels.filter(p=>effectivePanelStatus(p)==="Procesā").length;
-  $("countDone").textContent=panels.filter(p=>effectivePanelStatus(p)==="Pabeigts").length;
 
-  // Atsevišķi parādām sesiju skaitu, lai sesiju rindas netiktu sajauktas ar paneļu skaitu.
+  const ff=$("overviewFactory").value;
+  const fo=$("overviewObject").value;
+  const fw=$("overviewWorker").value;
+  const q=$("overviewSearch").value.trim().toLowerCase();
+  const range=periodRange($("datePreset").value);
+  const sessions=filteredSessions();
+
+  // Bāzes paneļu saraksts pēc rūpnīcas/objekta/meklēšanas.
+  let reportPanels=S.panels
+    .filter(p=>panelMatchesFactory(p,ff))
+    .filter(p=>!fo||p.objectId===fo)
+    .filter(p=>!q||String(p.panelName||"").toLowerCase().includes(q));
+
+  // Ja izvēlēts datuma periods vai konkrēts darbinieks, Pārskatā rādam tikai
+  // tos paneļus, kuriem ir vismaz viena attiecīgajam filtram atbilstoša sesija.
+  if(range||fw){
+    const matchingPanelIds=new Set(
+      sessions
+        .map(resolvePanelForSession)
+        .filter(Boolean)
+        .map(p=>p.id)
+    );
+    reportPanels=reportPanels.filter(p=>matchingPanelIds.has(p.id));
+  }
+
+  $("countNotStarted").textContent=reportPanels.filter(p=>effectivePanelStatus(p)==="Nav sākts").length;
+  $("countRunning").textContent=reportPanels.filter(p=>effectivePanelStatus(p)==="Procesā").length;
+  $("countDone").textContent=reportPanels.filter(p=>effectivePanelStatus(p)==="Pabeigts").length;
+
   const runningSessions=sessions.filter(isActiveSession).length;
   const doneSessions=sessions.filter(s=>String(s.status||"").trim()==="Pabeigts").length;
   if($("sessionRunningCount"))$("sessionRunningCount").textContent=`${runningSessions} procesā`;
@@ -1249,20 +1307,13 @@ function renderReport(){
 
   $("totalTime").textContent=hms(sessions.reduce((a,s)=>a+elapsed(s),0));
   const body=$("overviewBody");body.innerHTML="";
-  const q=$("overviewSearch").value.trim().toLowerCase();
-  const fw=$("overviewWorker").value;
 
-  const reportPanels=panels
-    .filter(p=>!q||String(p.panelName||"").toLowerCase().includes(q))
-    .filter(p=>{
-      if(!fw)return true;
-      return sessionsForPanel(p).some(s=>s.workerId===fw);
-    })
-    .sort(panelStatusSort);
+  reportPanels=reportPanels.sort(panelStatusSort);
 
   reportPanels.forEach(p=>{
     const panelSessions=sessionsForPanel(p)
       .filter(s=>!fw||s.workerId===fw)
+      .filter(s=>sessionInPeriod(s,range))
       .sort((a,b)=>(toDate(b.startAt)?.getTime()||0)-(toDate(a.startAt)?.getTime()||0));
 
     const status=effectivePanelStatus(p);
