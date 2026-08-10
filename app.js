@@ -1194,6 +1194,13 @@ function renderReport(){
   $("countNotStarted").textContent=panels.filter(p=>effectivePanelStatus(p)==="Nav sākts").length;
   $("countRunning").textContent=panels.filter(p=>effectivePanelStatus(p)==="Procesā").length;
   $("countDone").textContent=panels.filter(p=>effectivePanelStatus(p)==="Pabeigts").length;
+
+  // Atsevišķi parādām sesiju skaitu, lai sesiju rindas netiktu sajauktas ar paneļu skaitu.
+  const runningSessions=sessions.filter(isActiveSession).length;
+  const doneSessions=sessions.filter(s=>String(s.status||"").trim()==="Pabeigts").length;
+  if($("sessionRunningCount"))$("sessionRunningCount").textContent=`${runningSessions} procesā`;
+  if($("sessionDoneCount"))$("sessionDoneCount").textContent=`${doneSessions} pabeigtas`;
+
   $("totalTime").textContent=hms(sessions.reduce((a,s)=>a+elapsed(s),0));
   const body=$("overviewBody");body.innerHTML="";
   const panelRank=panelStatusRank;

@@ -183,10 +183,15 @@
           <input id="overviewSearch" placeholder="Meklēt paneli">
         </div>
         <div class="summary-grid four">
-          <div><span>Nav sākts</span><strong id="countNotStarted">0</strong></div>
-          <div><span>Procesā</span><strong id="countRunning">0</strong></div>
-          <div><span>Pabeigts</span><strong id="countDone">0</strong></div>
+          <div><span>Paneļi · Nav sākti</span><strong id="countNotStarted">0</strong></div>
+          <div><span>Paneļi · Procesā</span><strong id="countRunning">0</strong></div>
+          <div><span>Paneļi · Pabeigti</span><strong id="countDone">0</strong></div>
           <div><span>Darba stundas</span><strong id="totalTime">00:00:00</strong></div>
+        </div>
+        <div class="session-summary">
+          <span>Darba sesijas:</span>
+          <strong id="sessionRunningCount">0 procesā</strong>
+          <strong id="sessionDoneCount">0 pabeigtas</strong>
         </div>
         <div class="table-wrap report-table-wrap">
           <table class="overview-table">
@@ -353,7 +358,7 @@
 <script src="cache-reset.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="api-config.js?v=6.2"></script>
-  <script type="module" src="app.js?v=6.3.9"></script>
+  <script type="module" src="app.js?v=6.3.11"></script>
 
   <input id="managerPanelPhotoInput" type="file" accept="image/*" capture="environment" class="hidden">
 
